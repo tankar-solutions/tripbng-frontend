@@ -23,25 +23,39 @@ jobs:
   build:
     runs-on: self-hosted
     steps:
+      # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Setup Node.js environment
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "yarn"
+          node-version: "20"  # Update this if you need a different Node.js version
+          cache: "npm"
 
+      # Cache npm dependencies
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-cache-
+
+      # Install dependencies
       - name: Install dependencies
-        run: yarn install
+        run: npm install
 
+      # Build and export the Next.js site
       - name: Build the Next.js site
         run: |
-          yarn build
-          yarn export
+          npm run build
+          npm run export
         env:
-          NEXT_PUBLIC_BASE_PATH: "/tripbng.com"
+          NEXT_PUBLIC_BASE_PATH: "/tripbng.com"  # Adjust this if needed for your environment
 
+      # Upload static files for deployment
       - name: Upload static files
         uses: actions/upload-pages-artifact@v3
         with:
@@ -54,6 +68,7 @@ jobs:
       pages: write
       id-token: write
     steps:
+      # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
