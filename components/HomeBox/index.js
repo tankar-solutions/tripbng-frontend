@@ -558,7 +558,7 @@ const HomeBox = () => {
                         alt="Home Box"
                         onClick={() => handleCitySelect(city, cityType)}
                       >
-                        <Image src="icons/departures.png" className="w-6 h-6"width={16} height={16} alt="Home Box"/>
+                        <Image src="/icons/departures.png" className="w-6 h-6"width={16} height={16} alt="Home Box"/>
                         <span>
                           <p className="text-sm">{`${city.iata_code} - ${city.municipality}`}</p>
                           <p className=" truncate max-w-xs sm:max-w-sm md:max-w-md cursor-pointer">{`${city.name} Intl Arpt`}</p>

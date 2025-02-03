@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
 import { ArrowRightLeft, PlusCircle, X } from "lucide-react";
@@ -166,7 +166,6 @@ export default function Home() {
       toast.error("At least two cities are required.");
     }
   }
-
   const allCityData = async (query = "") => {
     try {
       setLoading(true);
@@ -187,27 +186,26 @@ export default function Home() {
       setLoading(false);
     }
   };
-
-  const debouncedFetch = debounce((query) => {
-    allCityData(query);
-  }, 300);
+  
+  const debouncedFetch = useCallback(
+    debounce((query) => {
+      allCityData(query);
+    }, 300),
+    []
+  );
+  
   useEffect(() => {
     if (searchQuery.trim()) {
-      // If searchQuery has a value, call with it
-      allCityData(searchQuery);
+      debouncedFetch(searchQuery); // This will call the debounced function
     } else {
-      // Otherwise, fetch default data
-      allCityData();
+      allCityData(); // For the case when there is no query
     }
-  }, [searchQuery]);
-  useEffect(() => {
-    if (searchQuery.trim() !== "") {
-      debouncedFetch(searchQuery);
-    }
+  
     return () => {
-      debouncedFetch.cancel();
+      debouncedFetch.cancel(); // Cleanup the debounce function on unmount or query change
     };
-  }, [debouncedFetch, searchQuery]);
+  }, [searchQuery, debouncedFetch]);
+  
   const handleCityChangess = (type, value) => {
     setSelectedCities((prevState) => {
       return prevState.map((city) => {
@@ -220,7 +218,6 @@ export default function Home() {
       });
     });
   };
-
   const renderCityCards = () => {
     return cities.map((city, index) => (
       <div

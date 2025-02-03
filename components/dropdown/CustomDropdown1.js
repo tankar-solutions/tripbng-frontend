@@ -88,7 +88,7 @@ const CustomDropdown = ({
         <div className="absolute z-10 w-96 mb-2 bg-white border rounded-lg shadow-2xl max-h-60 overflow-auto top-[20%]">
           {searchEnabled && (
             <div className="flex items-center gap-3 px-3 py-2 shadow-lg">
-              <Image src="icons/search.png" className="w-6 h-6" alt="Flight Img"/>
+              <Image src="/icons/search.png" width={100} height={100} className="w-6 h-6" alt="Flight Img"/>
               <input
                 type="text"
                 className="w-full focus:outline-none focus:ring-2"
@@ -109,7 +109,7 @@ const CustomDropdown = ({
                   onClick={() => handleOptionClick(option.iata_code, option.iso_country)}
                 >
                   <div className="flex gap-3 items-center w-full">
-                    <Image src="icons/departures.png" className="w-6 h-6" alt="Flight Img"/>
+                    <Image src="/icons/departures.png" width={100} height={100} className="w-6 h-6" alt="Flight Img"/>
                     <div className="w-full">
                       <div className="flex items-center justify-between">
                         <h2 className="text-lg font-medium">
