@@ -1,5 +1,11 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Button from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
 import { ArrowRightLeft, PlusCircle, X } from "lucide-react";
@@ -13,41 +19,39 @@ import {
 import { airports } from "@/constants/data/airports";
 import toast from "react-hot-toast";
 import { dates } from "@/constants/data/date";
-import { TRAVELLERS_CLASS } from "@/constants/data/flight-data";
 import { useRouter } from "next/navigation";
-// import { apiService } from "@/lib/api";
 import DatePicker from "react-datepicker";
 import { addDays, format } from "date-fns";
-import { apiService } from "@/lib/api";
-import { Input } from "@/components/ui";
-import { debounce } from "lodash";
-import CustomDropdown from "@/components/dropdown/CustomDropdown";
+import axios from "axios";
 export default function Home() {
   const router = useRouter();
-  const [allCity, setAllCity] = useState([]);
   const [selectedTripType, setSelectedTripType] = useState("One Way");
   const [selectedFareType, setSelectedFareType] = useState("Regular");
   const [departureDate, setDepartureDate] = useState("");
   const ITEMS_PER_PAGE = 20;
-  const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [isDomestic, setIsDomestic] = useState(0);
   const [travelerCounts, setTravelerCounts] = useState({
     a: 1,
     c: 0,
     i: 0,
     tp: 0,
   });
+  const [dropdown1, setDropdown1] = useState(null);
+  const [dropdown2, setDropdown2] = useState(null);
+  const [dropdown1Open, setDropdown1Open] = useState(false);
+  const [dropdown2Open, setDropdown2Open] = useState(false);
+  const [dropdown1Options, setDropdown1Options] = useState([]);
+  const [dropdown2Options, setDropdown2Options] = useState([]);
+  const [searchQuery1, setSearchQuery1] = useState("");
+  const [searchQuery2, setSearchQuery2] = useState("");
   const [selectedCities, setSelectedCities] = useState([
-    { Origin: "AMD", Destination: "DEL", TravelDate: selectedDate },
+    { Origin: "AMD", Destination: "DEL", TravelDate: "22/12/2022" },
   ]);
   const [originCountry, setOriginCountry] = useState("IN");
   const [destinationCountry, setDestinationCountry] = useState("IN");
-
+  const inputRef1 = useRef(null);
+  const inputRef2 = useRef(null);
   const handleOriginCountryChange = (country) => {
     setOriginCountry(country);
   };
@@ -166,58 +170,7 @@ export default function Home() {
       toast.error("At least two cities are required.");
     }
   }
-  const allCityData = async (query = "") => {
-    try {
-      setLoading(true);
-      const response = await apiService.get(
-        `/flight/searchAirport?search=${query}`
-      );
-      if (response.success) {
-        localStorage.setItem("cityData", JSON.stringify(response.data));
-        setAllCity(response.data);
-      } else {
-        toast.error("Failed to fetch city data");
-        console.error("API Error Response:", response);
-      }
-    } catch (error) {
-      toast.error(`Error fetching city data: ${error.message}`);
-      console.error("Error fetching city data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const debouncedFetch = useCallback(
-    debounce((query) => {
-      allCityData(query);
-    }, 300),
-    []
-  );
-  
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      debouncedFetch(searchQuery); // This will call the debounced function
-    } else {
-      allCityData(); // For the case when there is no query
-    }
-  
-    return () => {
-      debouncedFetch.cancel(); // Cleanup the debounce function on unmount or query change
-    };
-  }, [searchQuery, debouncedFetch]);
-  
-  const handleCityChangess = (type, value) => {
-    setSelectedCities((prevState) => {
-      return prevState.map((city) => {
-        if (type === "Origin") {
-          return { ...city, Origin: value };
-        } else if (type === "Destination") {
-          return { ...city, Destination: value };
-        }
-        return city;
-      });
-    });
-  };
+
   const renderCityCards = () => {
     return cities.map((city, index) => (
       <div
@@ -408,7 +361,159 @@ export default function Home() {
         return null;
     }
   };
+  // dropdown
+  const getAllCity = async (query = "", setOptions) => {
+    try {
+      const response = await axios.get(
+        `https://api.tripbng.com/flight/searchAirport?search=${query}`
+      );
+      if (response.data.success) {
+        setOptions(response.data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching city options:", err);
+    }
+  };
 
+  useEffect(() => {
+    getAllCity("", setDropdown1Options);
+    getAllCity("", setDropdown2Options);
+
+    const savedDropdown1 = localStorage.getItem("selectedDropdown1");
+    const savedDropdown2 = localStorage.getItem("selectedDropdown2");
+    if (savedDropdown1) setDropdown1(JSON.parse(savedDropdown1));
+    if (savedDropdown2) setDropdown2(JSON.parse(savedDropdown2));
+  }, []);
+
+  useEffect(() => {
+    if (!dropdown1) {
+      const defaultCity1 = dropdown1Options.find(
+        (option) => option.iata_code === "AMD"
+      );
+      setDropdown1(defaultCity1);
+    }
+  }, [dropdown1Options]);
+
+  useEffect(() => {
+    if (!dropdown2) {
+      const defaultCity2 = dropdown2Options.find(
+        (option) => option.iata_code === "DEL"
+      );
+      setDropdown2(defaultCity2);
+    }
+  }, [dropdown2Options]);
+
+  const handleSearchChange = (e, setSearchQuery, setOptions) => {
+    setSearchQuery(e.target.value);
+    getAllCity(e.target.value, setOptions);
+  };
+
+  const handleSelect = (selectedOption, setDropdown, storageKey, isOrigin) => {
+    setDropdown(selectedOption);
+    localStorage.setItem(storageKey, JSON.stringify(selectedOption));
+
+    // Update selectedCities when an option is selected
+    setSelectedCities((prevCities) => {
+      const updatedCities = prevCities.map((city) => {
+        if (isOrigin && city.Origin === dropdown1.iata_code) {
+          return { ...city, Origin: selectedOption.iata_code };
+        }
+        if (!isOrigin && city.Destination === dropdown2.iata_code) {
+          return { ...city, Destination: selectedOption.iata_code };
+        }
+        return city;
+      });
+      return updatedCities;
+    });
+  };
+
+  const toggleDropdown = (dropdown, setDropdown) => {
+    setDropdown((prev) => {
+      if (!prev) {
+        setDropdown1Open(setDropdown === setDropdown1Open);
+        setDropdown2Open(setDropdown === setDropdown2Open);
+      }
+      return !prev;
+    });
+  };
+
+  const Dropdown = ({
+    options,
+    selected,
+    onSelect,
+    isOpen,
+    toggleOpen,
+    searchQuery,
+    onSearchChange,
+    inputRef,
+    isOrigin,
+  }) => {
+    useEffect(() => {
+      if (isOpen && inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, [isOpen]);
+
+    const filteredOptions = useMemo(() => {
+      return options.filter(
+        (option) =>
+          option.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          option.municipality
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          option.iata_code.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }, [options, searchQuery]);
+
+    return (
+      <div className="relative w-64">
+        <button
+          className="w-full px-1 py-2  rounded-lg   text-left focus:outline-none"
+          onClick={() => toggleOpen(!isOpen)}
+        >
+           <p className="text-xs sm:text-sm text-neutral-400">
+    {isOrigin ? "From" : "To"}
+  </p>
+          {selected ? (
+            <div>
+              <strong className="text-2xl">{selected.municipality}</strong> 
+              <p className="truncate">{selected.iata_code}, {selected.name}</p>
+            </div>
+          ) : (
+            "Select an option"
+          )}
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-md mt-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchQuery}
+              onChange={onSearchChange}
+              className="w-full px-4 py-2 border-b border-gray-300 rounded-t-lg focus:outline-none"
+              placeholder="Search..."
+            />
+            <ul className="max-h-60 overflow-y-auto">
+              {filteredOptions.map((option, index) => (
+                <li
+                  key={index}
+                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  onClick={() => {
+                    onSelect(option);
+                    toggleOpen(false);
+                  }}
+                >
+                  <strong>{option.municipality}</strong> ({option.iata_code}) -{" "}
+                  {option.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
   return (
     <div className="bg-white p-8 rounded-xl relative ">
       <div className="flex items-center gap-4 mb-6">
@@ -457,29 +562,40 @@ export default function Home() {
         renderCityCards()
       ) : (
         <div className="rounded-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-6 relative">
-          <CustomDropdown
-            options={allCity}
-            selectedValue={selectedCities[0].Origin || "AMD"}
-            onValueChange={(value) => handleCityChangess("Origin", value)}
-            fetchCityData={allCityData}
-            placeholder="Select origin city"
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
+          <div className="border py-6 px-2 rounded-l-xl hover:bg-yellow/10 transition-all duration-300 cursor-pointer">
+          <Dropdown
+            options={dropdown1Options}
+            selected={dropdown1}
+            onSelect={(option) =>
+              handleSelect(option, setDropdown1, "selectedDropdown1", true)
+            }
+            isOpen={dropdown1Open}
+            toggleOpen={() => toggleDropdown(dropdown1Open, setDropdown1Open)}
+            searchQuery={searchQuery1}
+            onSearchChange={(e) =>
+              handleSearchChange(e, setSearchQuery1, setDropdown1Options)
+            }
+            inputRef={inputRef1}
             isOrigin={true}
-            onCountryChange={handleOriginCountryChange}
           />
-
-          <CustomDropdown
-            options={allCity}
-            selectedValue={selectedCities[0].Destination || "BLR"}
-            onValueChange={(value) => handleCityChangess("Destination", value)}
-            fetchCityData={allCityData}
-            placeholder="Select destination city"
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            isOrigin={true}
-            onCountryChange={handleDestinationCountryChange}
+          </div>
+          <div className="border py-6 px-2 hover:bg-yellow/10 transition-all duration-300 cursor-pointer">
+          <Dropdown
+            options={dropdown2Options}
+            selected={dropdown2}
+            onSelect={(option) =>
+              handleSelect(option, setDropdown2, "selectedDropdown2", false)
+            }
+            isOpen={dropdown2Open}
+            toggleOpen={() => toggleDropdown(dropdown2Open, setDropdown2Open)}
+            searchQuery={searchQuery2}
+            onSearchChange={(e) =>
+              handleSearchChange(e, setSearchQuery2, setDropdown2Options)
+            }
+            inputRef={inputRef2}
+            isOrigin={false}
           />
+          </div>
 
           {renderTripFields()}
           <div className="border p-6 rounded-r-xl hover:bg-yellow/10 transition-all duration-300 cursor-pointer">
