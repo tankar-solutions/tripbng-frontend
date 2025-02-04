@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import { addDays, format } from "date-fns";
 import axios from "axios";
+import Image from "next/image";
 export default function Home() {
   const router = useRouter();
   const [selectedTripType, setSelectedTripType] = useState("One Way");
@@ -45,6 +46,7 @@ export default function Home() {
   const [dropdown2Options, setDropdown2Options] = useState([]);
   const [searchQuery1, setSearchQuery1] = useState("");
   const [searchQuery2, setSearchQuery2] = useState("");
+  const [isDomestic, setIsDomestic] = useState(0);
   const [selectedCities, setSelectedCities] = useState([
     { Origin: "AMD", Destination: "DEL", TravelDate: "22/12/2022" },
   ]);
@@ -52,13 +54,8 @@ export default function Home() {
   const [destinationCountry, setDestinationCountry] = useState("IN");
   const inputRef1 = useRef(null);
   const inputRef2 = useRef(null);
-  const handleOriginCountryChange = (country) => {
-    setOriginCountry(country);
-  };
-
-  const handleDestinationCountryChange = (country) => {
-    setDestinationCountry(country);
-  };
+  const dropdown1Ref = useRef(null);
+  const dropdown2Ref = useRef(null);
 
   const handleCountChange = (type, value) => {
     setTravelerCounts((prev) => ({
@@ -365,7 +362,7 @@ export default function Home() {
   const getAllCity = async (query = "", setOptions) => {
     try {
       const response = await axios.get(
-        `https://api.tripbng.com/flight/searchAirport?search=${query}`
+        `https://tripbookngo-backend.onrender.com/flight/searchAirport?search=${query}`
       );
       if (response.data.success) {
         setOptions(response.data.data);
@@ -402,39 +399,59 @@ export default function Home() {
       setDropdown2(defaultCity2);
     }
   }, [dropdown2Options]);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdown1Ref.current &&
+        !dropdown1Ref.current.contains(event.target) &&
+        dropdown2Ref.current &&
+        !dropdown2Ref.current.contains(event.target)
+      ) {
+        setDropdown1Open(false);
+        setDropdown2Open(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSearchChange = (e, setSearchQuery, setOptions) => {
     setSearchQuery(e.target.value);
     getAllCity(e.target.value, setOptions);
   };
 
-  const handleSelect = (selectedOption, setDropdown, storageKey, isOrigin) => {
+  const handleSelect = (
+    selectedOption,
+    setDropdown,
+    setOpen,
+    storageKey,
+    isOrigin
+  ) => {
     setDropdown(selectedOption);
     localStorage.setItem(storageKey, JSON.stringify(selectedOption));
 
-    // Update selectedCities when an option is selected
+    // Close the dropdown after selecting an option
+    setOpen(false); // Close the dropdown
+
+    if (isOrigin) {
+      setOriginCountry(selectedOption?.iata_code || "N/A"); // Update origin country
+    } else {
+      setDestinationCountry(selectedOption?.iata_code || "N/A"); // Update destination country
+    }
+
     setSelectedCities((prevCities) => {
-      const updatedCities = prevCities.map((city) => {
-        if (isOrigin && city.Origin === dropdown1.iata_code) {
-          return { ...city, Origin: selectedOption.iata_code };
-        }
-        if (!isOrigin && city.Destination === dropdown2.iata_code) {
-          return { ...city, Destination: selectedOption.iata_code };
-        }
-        return city;
-      });
-      return updatedCities;
+      return prevCities.map((city) => ({
+        ...city,
+        Origin: isOrigin ? selectedOption.iata_code : city.Origin,
+        Destination: !isOrigin ? selectedOption.iata_code : city.Destination,
+      }));
     });
   };
 
-  const toggleDropdown = (dropdown, setDropdown) => {
-    setDropdown((prev) => {
-      if (!prev) {
-        setDropdown1Open(setDropdown === setDropdown1Open);
-        setDropdown2Open(setDropdown === setDropdown2Open);
-      }
-      return !prev;
-    });
+  const toggleDropdown = (setDropdown, otherDropdownSetter) => {
+    otherDropdownSetter(false); // Close the other dropdown
+    setDropdown((prev) => !prev); // Toggle the current dropdown
   };
 
   const Dropdown = ({
@@ -445,6 +462,7 @@ export default function Home() {
     toggleOpen,
     searchQuery,
     onSearchChange,
+    dropdownRef,
     inputRef,
     isOrigin,
   }) => {
@@ -466,18 +484,20 @@ export default function Home() {
     }, [options, searchQuery]);
 
     return (
-      <div className="relative w-64">
+      <div className="relative w-80" ref={dropdownRef}>
         <button
-          className="w-full px-1 py-2  rounded-lg   text-left focus:outline-none"
+          className="w-60 px-1 py-2 rounded-lg text-left focus:outline-none"
           onClick={() => toggleOpen(!isOpen)}
         >
-           <p className="text-xs sm:text-sm text-neutral-400">
-    {isOrigin ? "From" : "To"}
-  </p>
+          <p className="text-xs sm:text-sm text-neutral-400">
+            {isOrigin ? "From" : "To"}
+          </p>
           {selected ? (
             <div>
-              <strong className="text-2xl">{selected.municipality}</strong> 
-              <p className="truncate">{selected.iata_code}, {selected.name}</p>
+              <strong className="text-2xl">{selected.municipality}</strong>
+              <p className="truncate">
+                {selected.iata_code}, {selected.name}
+              </p>
             </div>
           ) : (
             "Select an option"
@@ -486,26 +506,54 @@ export default function Home() {
 
         {isOpen && (
           <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-md mt-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={searchQuery}
-              onChange={onSearchChange}
-              className="w-full px-4 py-2 border-b border-gray-300 rounded-t-lg focus:outline-none"
-              placeholder="Search..."
-            />
+            <span className="flex items-center gap-2 shadow-lg w-full px-2 py-2">
+              <Image
+                src="/icons/search.png"
+                width={100}
+                height={100}
+                className="w-4 h-4"
+                alt="Dropdown"
+              />
+
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={onSearchChange}
+                className="rounded-t-lg focus:outline-none"
+                placeholder="Search..."
+              />
+            </span>
             <ul className="max-h-60 overflow-y-auto">
               {filteredOptions.map((option, index) => (
                 <li
                   key={index}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  className="px-2 hover:bg-gray-100 cursor-pointer mt-2"
                   onClick={() => {
-                    onSelect(option);
-                    toggleOpen(false);
+                    onSelect(option); // Selecting an option
+                    toggleOpen(false); // Close the dropdown after selecting an option
                   }}
                 >
-                  <strong>{option.municipality}</strong> ({option.iata_code}) -{" "}
-                  {option.name}
+                  <span className="flex items-center gap-2">
+                    <Image
+                      src="/icons/departures.png"
+                      width={100}
+                      height={100}
+                      className="w-6 h-6"
+                      alt="Dropdown"
+                    />
+                    <span className="w-full">
+                      <span className="flex items-center justify-between">
+                        <strong className="text-sm">
+                          {option.municipality}
+                        </strong>
+                        <p className="text-gray-500 text-sm">
+                          {option.iata_code}
+                        </p>
+                      </span>
+                      <li className="text-xs text-gray-500"> {option.name}</li>
+                    </span>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -514,6 +562,7 @@ export default function Home() {
       </div>
     );
   };
+
   return (
     <div className="bg-white p-8 rounded-xl relative ">
       <div className="flex items-center gap-4 mb-6">
@@ -563,39 +612,54 @@ export default function Home() {
       ) : (
         <div className="rounded-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-6 relative">
           <div className="border py-6 px-2 rounded-l-xl hover:bg-yellow/10 transition-all duration-300 cursor-pointer">
-          <Dropdown
-            options={dropdown1Options}
-            selected={dropdown1}
-            onSelect={(option) =>
-              handleSelect(option, setDropdown1, "selectedDropdown1", true)
-            }
-            isOpen={dropdown1Open}
-            toggleOpen={() => toggleDropdown(dropdown1Open, setDropdown1Open)}
-            searchQuery={searchQuery1}
-            onSearchChange={(e) =>
-              handleSearchChange(e, setSearchQuery1, setDropdown1Options)
-            }
-            inputRef={inputRef1}
-            isOrigin={true}
-          />
-          </div>
-          <div className="border py-6 px-2 hover:bg-yellow/10 transition-all duration-300 cursor-pointer">
-          <Dropdown
-            options={dropdown2Options}
-            selected={dropdown2}
-            onSelect={(option) =>
-              handleSelect(option, setDropdown2, "selectedDropdown2", false)
-            }
-            isOpen={dropdown2Open}
-            toggleOpen={() => toggleDropdown(dropdown2Open, setDropdown2Open)}
-            searchQuery={searchQuery2}
-            onSearchChange={(e) =>
-              handleSearchChange(e, setSearchQuery2, setDropdown2Options)
-            }
-            inputRef={inputRef2}
-            isOrigin={false}
-          />
-          </div>
+  <Dropdown
+    options={dropdown1Options}
+    selected={dropdown1}
+    onSelect={(option) =>
+      handleSelect(
+        option,
+        setDropdown1,
+        setDropdown1Open,
+        "selectedDropdown1",
+        true
+      )
+    }
+    isOpen={dropdown1Open}
+    toggleOpen={() => toggleDropdown(setDropdown1Open, setDropdown2Open)} // Pass the setter functions
+    searchQuery={searchQuery1}
+    onSearchChange={(e) =>
+      handleSearchChange(e, setSearchQuery1, setDropdown1Options)
+    }
+    inputRef={inputRef1}
+    dropdownRef={dropdown1Ref}
+    isOrigin={true}
+  />
+</div>
+<div className="border py-6 px-2 hover:bg-yellow/10 transition-all duration-300 cursor-pointer">
+  <Dropdown
+    options={dropdown2Options}
+    selected={dropdown2}
+    onSelect={(option) =>
+      handleSelect(
+        option,
+        setDropdown2,
+        setDropdown2Open,
+        "selectedDropdown2",
+        false
+      )
+    }
+    isOpen={dropdown2Open}
+    toggleOpen={() => toggleDropdown(setDropdown2Open, setDropdown1Open)} // Pass the setter functions
+    searchQuery={searchQuery2}
+    onSearchChange={(e) =>
+      handleSearchChange(e, setSearchQuery2, setDropdown2Options)
+    }
+    inputRef={inputRef2}
+    dropdownRef={dropdown2Ref}
+    isOrigin={false}
+  />
+</div>
+
 
           {renderTripFields()}
           <div className="border p-6 rounded-r-xl hover:bg-yellow/10 transition-all duration-300 cursor-pointer">
@@ -732,9 +796,9 @@ export default function Home() {
         </div>
       )}
 
-      <div className="flex items-center justify-center md:gap-4">
+      <div className="flex items-center justify-center md:gap-4 mb-3">
         <button
-          className={`p-4 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
+          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
             selectedFareType === "Regular"
               ? "border-2 border-yellow"
               : "border-neutral-300"
@@ -748,7 +812,7 @@ export default function Home() {
           </div>
         </button>
         <button
-          className={`p-4 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
+          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
             selectedFareType === "Senior Citizen"
               ? "border-2 border-yellow"
               : "border-neutral-300"
@@ -762,7 +826,7 @@ export default function Home() {
           </div>
         </button>
         <button
-          className={`p-4 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
+          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
             selectedFareType === "Armed Forces"
               ? "border-2 border-yellow"
               : "border-neutral-300"
@@ -776,7 +840,7 @@ export default function Home() {
           </div>
         </button>
         <button
-          className={`p-4 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
+          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
             selectedFareType === "Doctor and Nurses"
               ? "border-2 border-yellow"
               : "border-neutral-300"
@@ -794,7 +858,7 @@ export default function Home() {
       <Button
         onClick={handleRedirect}
         size="lg"
-        className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-yellow text-white py-2 px-4 rounded-full hover:bg-yellow-600 transition-colors duration-300"
+        className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-yellow text-white text-xl font-semibold py-2 px-14 rounded-full hover:bg-yellow-600 transition-colors duration-300"
       >
         Search
       </Button>

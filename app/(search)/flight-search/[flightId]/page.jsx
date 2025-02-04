@@ -1355,7 +1355,9 @@ export default function Page() {
                         <Image
                           src="/icons/noFlightt.png"
                           alt=""
-                          className="w-50 h-50"
+                          className="w-50 h-50 object-contain"
+                          width={400}
+                          height={400}
                         />
                         <p className="text-xl font-semibold">
                           No flight available...
@@ -1369,7 +1371,9 @@ export default function Page() {
                   <Image
                     src="/icons/noFlightt.png"
                     alt="Flight img"
-                    className="w-50 h-50"
+                    className="w-50 h-50 object-contain"
+                    width={400}
+                    height={400}
                   />
                   <p className="text-xl font-semibold">
                     No flight available...
