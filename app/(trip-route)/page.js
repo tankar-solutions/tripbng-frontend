@@ -248,9 +248,8 @@ export default function Home() {
 
         {index === cities.length - 1 && (
           <div
-            className={`border p-6 hover:bg-yellow/10 transition-all duration-300 cursor-pointer flex items-center w-fit rounded-r-xl ${
-              city.to ? "" : "bg-gray-100"
-            }`}
+            className={`border p-6 hover:bg-yellow/10 transition-all duration-300 cursor-pointer flex items-center w-fit rounded-r-xl ${city.to ? "" : "bg-gray-100"
+              }`}
           >
             {city.to ? (
               <button
@@ -296,11 +295,9 @@ export default function Home() {
                     selectedDate instanceof Date &&
                     selectedDate.toDateString() === date.toDateString();
                   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                  return `${
-                    isSelected ? "bg-yellow text-white font-semibold" : ""
-                  } ${
-                    isWeekend ? "text-blue-500 font-semibold" : "text-black"
-                  }`;
+                  return `${isSelected ? "bg-yellow text-white font-semibold" : ""
+                    } ${isWeekend ? "text-blue-500 font-semibold" : "text-black"
+                    }`;
                 }}
                 todayButton="Go to today"
               />
@@ -362,7 +359,7 @@ export default function Home() {
   const getAllCity = async (query = "", setOptions) => {
     try {
       const response = await axios.get(
-        `https://tripbookngo-backend.onrender.com/flight/searchAirport?search=${query}`
+        `https://api-tripbng.onrender.com/flight/searchAirport?search=${query}`
       );
       if (response.data.success) {
         setOptions(response.data.data);
@@ -568,40 +565,34 @@ export default function Home() {
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => setSelectedTripType("One Way")}
-          className={`text-xs flex items-center gap-2 rounded-full p-2 ${
-            selectedTripType === "One Way" && "bg-yellow/10"
-          }`}
+          className={`text-xs flex items-center gap-2 rounded-full p-2 ${selectedTripType === "One Way" && "bg-yellow/10"
+            }`}
         >
           <span
-            className={`block w-4 h-4 rounded-full ${
-              selectedTripType === "One Way" ? "bg-yellow" : "bg-white"
-            }`}
+            className={`block w-4 h-4 rounded-full ${selectedTripType === "One Way" ? "bg-yellow" : "bg-white"
+              }`}
           ></span>
           <p>One Way</p>
         </button>
         <button
           onClick={() => setSelectedTripType("Round Trip")}
-          className={`text-xs flex items-center gap-2 rounded-full p-2 ${
-            selectedTripType === "Round Trip" && "bg-yellow/10"
-          }`}
+          className={`text-xs flex items-center gap-2 rounded-full p-2 ${selectedTripType === "Round Trip" && "bg-yellow/10"
+            }`}
         >
           <span
-            className={`block w-4 h-4 rounded-full ${
-              selectedTripType === "Round Trip" ? "bg-yellow" : "bg-white"
-            }`}
+            className={`block w-4 h-4 rounded-full ${selectedTripType === "Round Trip" ? "bg-yellow" : "bg-white"
+              }`}
           ></span>
           <p>Round Trip</p>
         </button>
         <button
           onClick={() => setSelectedTripType("Multiple City")}
-          className={`text-xs flex items-center gap-2 rounded-full p-2 ${
-            selectedTripType === "Multiple City" && "bg-yellow/10"
-          }`}
+          className={`text-xs flex items-center gap-2 rounded-full p-2 ${selectedTripType === "Multiple City" && "bg-yellow/10"
+            }`}
         >
           <span
-            className={`block w-4 h-4 rounded-full ${
-              selectedTripType === "Multiple City" ? "bg-yellow" : "bg-white"
-            }`}
+            className={`block w-4 h-4 rounded-full ${selectedTripType === "Multiple City" ? "bg-yellow" : "bg-white"
+              }`}
           ></span>
           <p>Multiple City</p>
         </button>
@@ -612,53 +603,53 @@ export default function Home() {
       ) : (
         <div className="rounded-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-6 relative">
           <div className="border py-6 px-2 rounded-l-xl hover:bg-yellow/10 transition-all duration-300 cursor-pointer">
-  <Dropdown
-    options={dropdown1Options}
-    selected={dropdown1}
-    onSelect={(option) =>
-      handleSelect(
-        option,
-        setDropdown1,
-        setDropdown1Open,
-        "selectedDropdown1",
-        true
-      )
-    }
-    isOpen={dropdown1Open}
-    toggleOpen={() => toggleDropdown(setDropdown1Open, setDropdown2Open)} // Pass the setter functions
-    searchQuery={searchQuery1}
-    onSearchChange={(e) =>
-      handleSearchChange(e, setSearchQuery1, setDropdown1Options)
-    }
-    inputRef={inputRef1}
-    dropdownRef={dropdown1Ref}
-    isOrigin={true}
-  />
-</div>
-<div className="border py-6 px-2 hover:bg-yellow/10 transition-all duration-300 cursor-pointer">
-  <Dropdown
-    options={dropdown2Options}
-    selected={dropdown2}
-    onSelect={(option) =>
-      handleSelect(
-        option,
-        setDropdown2,
-        setDropdown2Open,
-        "selectedDropdown2",
-        false
-      )
-    }
-    isOpen={dropdown2Open}
-    toggleOpen={() => toggleDropdown(setDropdown2Open, setDropdown1Open)} // Pass the setter functions
-    searchQuery={searchQuery2}
-    onSearchChange={(e) =>
-      handleSearchChange(e, setSearchQuery2, setDropdown2Options)
-    }
-    inputRef={inputRef2}
-    dropdownRef={dropdown2Ref}
-    isOrigin={false}
-  />
-</div>
+            <Dropdown
+              options={dropdown1Options}
+              selected={dropdown1}
+              onSelect={(option) =>
+                handleSelect(
+                  option,
+                  setDropdown1,
+                  setDropdown1Open,
+                  "selectedDropdown1",
+                  true
+                )
+              }
+              isOpen={dropdown1Open}
+              toggleOpen={() => toggleDropdown(setDropdown1Open, setDropdown2Open)} // Pass the setter functions
+              searchQuery={searchQuery1}
+              onSearchChange={(e) =>
+                handleSearchChange(e, setSearchQuery1, setDropdown1Options)
+              }
+              inputRef={inputRef1}
+              dropdownRef={dropdown1Ref}
+              isOrigin={true}
+            />
+          </div>
+          <div className="border py-6 px-2 hover:bg-yellow/10 transition-all duration-300 cursor-pointer">
+            <Dropdown
+              options={dropdown2Options}
+              selected={dropdown2}
+              onSelect={(option) =>
+                handleSelect(
+                  option,
+                  setDropdown2,
+                  setDropdown2Open,
+                  "selectedDropdown2",
+                  false
+                )
+              }
+              isOpen={dropdown2Open}
+              toggleOpen={() => toggleDropdown(setDropdown2Open, setDropdown1Open)} // Pass the setter functions
+              searchQuery={searchQuery2}
+              onSearchChange={(e) =>
+                handleSearchChange(e, setSearchQuery2, setDropdown2Options)
+              }
+              inputRef={inputRef2}
+              dropdownRef={dropdown2Ref}
+              isOrigin={false}
+            />
+          </div>
 
 
           {renderTripFields()}
@@ -703,11 +694,10 @@ export default function Home() {
                     {[1, 2, 3, 4, 5, 6].map((num) => (
                       <button
                         key={`adult-${num}`}
-                        className={`px-3 py-1 rounded-md ${
-                          travelerCounts.a === num
+                        className={`px-3 py-1 rounded-md ${travelerCounts.a === num
                             ? "bg-yellow text-white"
                             : "bg-gray-200"
-                        }`}
+                          }`}
                         onClick={() => handleCountChange("a", num)}
                       >
                         {num}
@@ -728,11 +718,10 @@ export default function Home() {
                     {[0, 1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={`children-${num}`}
-                        className={`px-3 py-1 rounded-md ${
-                          travelerCounts.c === num
+                        className={`px-3 py-1 rounded-md ${travelerCounts.c === num
                             ? "bg-yellow text-white"
                             : "bg-gray-200"
-                        }`}
+                          }`}
                         onClick={() => handleCountChange("c", num)}
                       >
                         {num}
@@ -754,11 +743,10 @@ export default function Home() {
                     {[0, 1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={`infant-${num}`}
-                        className={`px-3 py-1 rounded-md ${
-                          travelerCounts.i === num
+                        className={`px-3 py-1 rounded-md ${travelerCounts.i === num
                             ? "bg-yellow text-white"
                             : "bg-gray-200"
-                        }`}
+                          }`}
                         onClick={() => handleCountChange("i", num)}
                       >
                         {num}
@@ -778,11 +766,10 @@ export default function Home() {
                     ].map((type, index) => (
                       <button
                         key={`travelType-${index}`}
-                        className={`px-3 py-1 rounded-md ${
-                          travelerCounts.tp === index
+                        className={`px-3 py-1 rounded-md ${travelerCounts.tp === index
                             ? "bg-yellow text-white"
                             : "bg-gray-200"
-                        }`}
+                          }`}
                         onClick={() => handleCountChange("tp", index)}
                       >
                         {type}
@@ -798,11 +785,10 @@ export default function Home() {
 
       <div className="flex items-center justify-center md:gap-4 mb-3">
         <button
-          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
-            selectedFareType === "Regular"
+          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${selectedFareType === "Regular"
               ? "border-2 border-yellow"
               : "border-neutral-300"
-          }`}
+            }`}
           onClick={() => setSelectedFareType("Regular")}
         >
           <Checkbox checked={selectedFareType === "Regular"} />
@@ -812,11 +798,10 @@ export default function Home() {
           </div>
         </button>
         <button
-          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
-            selectedFareType === "Senior Citizen"
+          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${selectedFareType === "Senior Citizen"
               ? "border-2 border-yellow"
               : "border-neutral-300"
-          }`}
+            }`}
           onClick={() => setSelectedFareType("Senior Citizen")}
         >
           <Checkbox checked={selectedFareType === "Senior Citizen"} />
@@ -826,11 +811,10 @@ export default function Home() {
           </div>
         </button>
         <button
-          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
-            selectedFareType === "Armed Forces"
+          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${selectedFareType === "Armed Forces"
               ? "border-2 border-yellow"
               : "border-neutral-300"
-          }`}
+            }`}
           onClick={() => setSelectedFareType("Armed Forces")}
         >
           <Checkbox checked={selectedFareType === "Armed Forces"} />
@@ -840,11 +824,10 @@ export default function Home() {
           </div>
         </button>
         <button
-          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${
-            selectedFareType === "Doctor and Nurses"
+          className={`p-2 rounded-xl flex items-center gap-2 border-2 cursor-pointer ${selectedFareType === "Doctor and Nurses"
               ? "border-2 border-yellow"
               : "border-neutral-300"
-          }`}
+            }`}
           onClick={() => setSelectedFareType("Doctor and Nurses")}
         >
           <Checkbox checked={selectedFareType === "Doctor and Nurses"} />
