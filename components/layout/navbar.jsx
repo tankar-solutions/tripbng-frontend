@@ -96,7 +96,7 @@ export default function Navbar() {
       <div className="container flex justify-between items-center py-6">
         {/* Logo */}
         <Link href={"/"}>
-          <Image src={"/logo.png"} width={120} height={120} alt="logo" />
+          <Image src={"/logo.png"} width={150} height={150} alt="logo" />
         </Link>
 
         {/* Desktop Menu */}
