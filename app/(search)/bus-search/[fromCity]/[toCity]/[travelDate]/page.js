@@ -68,6 +68,12 @@ export default function BusDetails() {
   const [selectedSeatNumbers, setSelectedSeatNumbers] = useState([]);
   const [selectedSeatKeys, setSelectedSeatKeys] = useState([]);
 
+
+  const handleCheckout = () => {
+    router.push(`${pathname}/checkout`);
+  };
+
+
   // Group seats by row
   const groupedSeats = Array.isArray(busSeatMap)
     ? busSeatMap.reduce((acc, seat) => {
@@ -941,7 +947,7 @@ export default function BusDetails() {
                                     </p>
                                     <p>No Seats selected yet</p>
                                   </div>
-                                  <button className="bg-yellow text-white text-lg font-semibold w-full rounded-lg py-2">
+                                  <button className="bg-yellow text-white text-lg font-semibold w-full rounded-lg py-2" onClick={handleCheckout}>
                                     Continue
                                   </button>
                                 </div>
