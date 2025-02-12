@@ -64,6 +64,49 @@ export default function BusDetails() {
   const [busDrop, setBusDrop] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loaderBusList, setLoaderBusList] = useState(false);
+  // Independent seat selection states
+  const [selectedSeatNumbers, setSelectedSeatNumbers] = useState([]);
+  const [selectedSeatKeys, setSelectedSeatKeys] = useState([]);
+
+  // Group seats by row
+  const groupedSeats = Array.isArray(busSeatMap)
+    ? busSeatMap.reduce((acc, seat) => {
+        const row = parseInt(seat.Row, 10);
+        if (!acc[row]) acc[row] = [];
+        acc[row].push(seat);
+        return acc;
+      }, {})
+    : {};
+
+  // Sort rows numerically
+  const sortedRows = Object.keys(groupedSeats)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  const handleSeatSelect = (busKey, seat) => {
+    setSelectedSeatNumbers((prev) => {
+      const currentSelection = prev[busKey] || [];
+
+      const updatedSelection = currentSelection.includes(seat.Seat_Number)
+        ? currentSelection.filter((num) => num !== seat.Seat_Number) // Remove
+        : [...currentSelection, seat.Seat_Number]; // Add
+
+      return { ...prev, [busKey]: updatedSelection };
+    });
+  };
+
+  // UI for displaying selected seats per bus
+  {
+    Object.entries(selectedSeatNumbers).map(([busKey, seats]) => (
+      <div
+        key={busKey}
+        className="mt-4 p-2 bg-white border rounded text-center"
+      >
+        <h3 className="font-bold">Selected Seats for Bus {busKey}:</h3>
+        <p>Numbers: {seats.join(", ") || "None"}</p>
+      </div>
+    ));
+  }
 
   useEffect(() => {
     getBusList();
@@ -115,10 +158,11 @@ export default function BusDetails() {
 
       if (response?.data?.success) {
         toast.success("Bus seat map fetched successfully!");
-        setBusSeatMap((prev) => ({
-          ...prev,
-          [busKey]: processSeatMap(response?.data?.data?.SeatMap),
-        }));
+        // setBusSeatMap((prev) => ({
+        //   ...prev,
+        //   [busKey]: processSeatMap(response?.data?.data?.SeatMap),
+        // }));
+        setBusSeatMap(response?.data?.data?.SeatMap);
         setBusPickup(response?.data?.data?.BoardingDetails);
         setBusDrop(response?.data?.data?.DroppingDetails);
       } else {
@@ -136,36 +180,36 @@ export default function BusDetails() {
     }
   };
 
-  const processSeatMap = (seats) => {
-    let maxRow = 0;
-    let maxCol = 0;
+  // const processSeatMap = (seats) => {
+  //   let maxRow = 0;
+  //   let maxCol = 0;
 
-    seats.forEach(({ Row, Column }) => {
-      maxRow = Math.max(maxRow, parseInt(Row));
-      maxCol = Math.max(maxCol, parseInt(Column));
-    });
+  //   seats.forEach(({ Row, Column }) => {
+  //     maxRow = Math.max(maxRow, parseInt(Row));
+  //     maxCol = Math.max(maxCol, parseInt(Column));
+  //   });
 
-    const seatGrid = Array.from({ length: maxRow + 1 }, () =>
-      Array(maxCol + 1).fill("X")
-    );
+  //   const seatGrid = Array.from({ length: maxRow + 1 }, () =>
+  //     Array(maxCol + 1).fill("X")
+  //   );
 
-    seats.forEach(({ Row, Column, Seat_Number }) => {
-      const rowIndex = parseInt(Row);
-      const colIndex = parseInt(Column);
+  //   seats.forEach(({ Row, Column, Seat_Number }) => {
+  //     const rowIndex = parseInt(Row);
+  //     const colIndex = parseInt(Column);
 
-      if (seatGrid[rowIndex][colIndex] === "X") {
-        seatGrid[rowIndex][colIndex] = Seat_Number;
-      } else {
-        console.warn(
-          `Duplicate seat detected at Row: ${rowIndex}, Col: ${colIndex}`
-        );
-      }
-    });
+  //     if (seatGrid[rowIndex][colIndex] === "X") {
+  //       seatGrid[rowIndex][colIndex] = Seat_Number;
+  //     } else {
+  //       console.warn(
+  //         `Duplicate seat detected at Row: ${rowIndex}, Col: ${colIndex}`
+  //       );
+  //     }
+  //   });
 
-    seatGrid.forEach((row) => row.reverse());
+  //   seatGrid.forEach((row) => row.reverse());
 
-    return seatGrid;
-  };
+  //   return seatGrid;
+  // };
 
   const handleSeatSelection = (busKey, seat) => {
     setSelectedSeats((prev) => {
@@ -567,276 +611,349 @@ export default function BusDetails() {
         {loaderBusList ? (
           <Simmer />
         ) : (
-          <div className="w-[80%] ">
+          <div className="w-[100%] ">
             {busList && busList.length > 0 ? (
-              busList.map((bus) => (
-                <div
-                  key={bus.Bus_Key}
-                  className="border border-gray-200 rounded-lg p-6 mb-3 shadow-lg bg-white hover:shadow-xl transition-shadow"
-                >
-                  <div className="flex flex-col lg:flex-row items-center justify-between">
-                    {/* Bus Info */}
-                    <div className="lg:w-1/4 mb-4 lg:mb-0">
-                      <h4 className="font-semibold text-lg lg:text-xl text-gray-800">
-                        {bus.Operator_Name}
-                      </h4>
-                      <p className="text-sm text-gray-500">{bus.Bus_Type}</p>
-                      <p className="text-sm text-gray-500">
-                        {bus.Available_Seats} Seats Available
-                      </p>
-                    </div>
+              busList.map((bus) => {
+                const busKey = bus.Bus_Key; // Define busKey inside the map function
 
-                    {/* Travel Details */}
-                    <div className="lg:w-1/2 flex items-center justify-around">
-                      {/* From Details */}
-                      <div className="text-center">
-                        <p className="text-sm text-gray-500">{bus.from}</p>
-                        <p className="text-lg font-semibold text-gray-800">
-                          {bus.Departure_Time}
-                        </p>
-                        <p className="text-sm text-gray-500">{bus.depdate}</p>
-                      </div>
-
-                      {/* Distance Indicator */}
-                      <div className="relative mx-4 flex-grow">
-                        <div className="border-dashed border-gray-300 border-t h-0"></div>
-                        <p className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-sm text-gray-600">
-                          {bus.Duration}
+                return (
+                  <div
+                    key={busKey}
+                    className="border border-gray-200 rounded-lg p-6 mb-3 shadow-lg bg-white hover:shadow-xl transition-shadow"
+                  >
+                    <div className="flex flex-col lg:flex-row items-center justify-between">
+                      {/* Bus Info */}
+                      <div className="lg:w-1/4 mb-4 lg:mb-0">
+                        <h4 className="font-semibold text-lg lg:text-xl text-gray-800">
+                          {bus.Operator_Name}
+                        </h4>
+                        <p className="text-sm text-gray-500">{bus.Bus_Type}</p>
+                        <p className="text-sm text-gray-500">
+                          {bus.Available_Seats} Seats Available
                         </p>
                       </div>
 
-                      {/* To Details */}
-                      <div className="text-center">
-                        <p className="text-sm text-gray-500">{bus.to}</p>
-                        <p className="text-lg font-semibold text-gray-800">
-                          {bus.Arrival_Time}
+                      {/* Travel Details */}
+                      <div className="lg:w-1/2 flex items-center justify-around">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-500">{bus.from}</p>
+                          <p className="text-lg font-semibold text-gray-800">
+                            {bus.Departure_Time}
+                          </p>
+                          <p className="text-sm text-gray-500">{bus.depdate}</p>
+                        </div>
+                        <div className="relative mx-4 flex-grow">
+                          <div className="border-dashed border-gray-300 border-t h-0"></div>
+                          <p className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-sm text-gray-600">
+                            {bus.Duration}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm text-gray-500">{bus.to}</p>
+                          <p className="text-lg font-semibold text-gray-800">
+                            {bus.Arrival_Time}
+                          </p>
+                          <p className="text-sm text-gray-500">{bus.arrdate}</p>
+                        </div>
+                      </div>
+
+                      {/* Price and Button */}
+                      <div className="lg:w-1/4 text-right">
+                        <p className="text-2xl font-bold text-gray-800">
+                          {bus.FareMasters && bus.FareMasters.length > 0
+                            ? `₹${Math.min(
+                                ...bus.FareMasters.map(
+                                  (fare) => fare.Basic_Amount
+                                )
+                              )}`
+                            : "N/A"}
                         </p>
-                        <p className="text-sm text-gray-500">{bus.arrdate}</p>
+                        <button
+                          className="bg-yellow text-white px-6 py-2 font-semibold rounded-md mt-2 hover:bg-yellow-600"
+                          onClick={() => handleSeatMap(busKey)}
+                        >
+                          SELECT SEAT
+                        </button>
                       </div>
                     </div>
 
-                    {/* Price and Button */}
-                    <div className="lg:w-1/4 text-right">
-                      <p className="text-2xl font-bold text-gray-800">
-                        {bus.FareMasters && bus.FareMasters.length > 0
-                          ? `₹${Math.min(
-                              ...bus.FareMasters.map(
-                                (fare) => fare.Basic_Amount
-                              )
-                            )}`
-                          : "N/A"}
-                      </p>
-                      <button
-                        className="bg-yellow text-white px-6 py-2 font-semibold rounded-md mt-2 hover:bg-yellow-600"
-                        onClick={() => handleSeatMap(bus.Bus_Key)}
-                      >
-                        SELECT SEAT
-                      </button>
-                    </div>
-                  </div>
-
-                  {seatMap[bus.Bus_Key] && (
-                    <div>
-                      {loading ? (
-                        <RoundedLoader />
-                      ) : (
-                        <div className="mt-6 border-t border-gray-300 pt-6 w-full ">
-                          <div className="flex flex-col md:flex-row items-start w-full gap-4">
-                            {/* Seat Selection Section */}
-                            <div className="w-full md:w-1/2 bg-white rounded-lg shadow-md border border-gray-200 flex flex-col ">
-                              <div className="flex items-center justify-between bg-grayLight px-4 py-2 rounded-t-lg">
-                                <h2 className="text-sm font-semibold text-gray-800 text-center">
-                                  Select Your Seat
-                                </h2>
-                                <h2 className="text-sm font-semibold text-gray-800 text-center">
-                                  Know your seat
-                                </h2>
-                              </div>
-
-                              <div className="bg-gray-100 p-4 rounded-lg mx-auto shadow-lg relative flex-grow">
-                                {/* Driver Section */}
-                                <div className="flex justify-center mb-4">
-                                  <div className="w-12 h-12 bg-gray-800 text-white flex items-center justify-center rounded-md shadow-md">
-                                    🚍
-                                  </div>
+                    {/* Seat Selection */}
+                    {seatMap[busKey] && (
+                      <div>
+                        {loading ? (
+                          <RoundedLoader />
+                        ) : (
+                          <div className="mt-6 border-t border-gray-300 pt-6 w-full">
+                            <div className="flex flex-col md:flex-row items-start w-full gap-4">
+                              {/* Seat Selection Section */}
+                              <div className="w-full md:w-1/2 bg-white rounded-lg shadow-md border border-gray-200 flex flex-col">
+                                <div className="flex items-center justify-between bg-grayLight px-4 py-2 rounded-t-lg">
+                                  <h2 className="text-sm font-semibold text-gray-800 text-center">
+                                    Select Your Seat
+                                  </h2>
                                 </div>
 
-                                {/* Seat Layout */}
-                                <div className="flex flex-row gap-3 justify-center">
-                                  {(busSeatMap[bus.Bus_Key] || []).map(
-                                    (row, rowIndex) => (
+                                <div className="bg-gray-100 p-2 rounded-lg mx-auto relative">
+                                  {/* Lower Berth */}
+                                  <h3 className="text-center font-bold text-lg my-2">
+                                    Lower Berth
+                                  </h3>
+                                  <div className="flex flex-col gap-2 p-2 w-fit mx-auto">
+                                    {sortedRows.map((rowIndex) => (
                                       <div
                                         key={rowIndex}
-                                        className="flex flex-col gap-3 items-center"
+                                        className="flex gap-2 justify-center"
                                       >
-                                        {row.map((seat, seatIndex) =>
-                                          seat === "X" ? (
-                                            <div
-                                              key={seatIndex}
-                                              className="w-12 h-12"
-                                            ></div>
-                                          ) : (
-                                            <button
-                                              key={seatIndex}
-                                              className={`w-12 h-12 rounded-lg border text-sm font-semibold transition-all shadow-md ${
-                                                selectedSeats[
-                                                  bus.Bus_Key
-                                                ]?.includes(seat)
-                                                  ? "bg-green-600 text-white"
-                                                  : "bg-white text-gray-800 hover:bg-gray-300"
-                                              }`}
-                                              onClick={() =>
-                                                handleSeatSelection(
-                                                  bus.Bus_Key,
-                                                  seat
+                                        {groupedSeats[rowIndex]
+                                          .filter((seat) => seat.ZIndex === "0") // Only Lower Berth
+                                          .map((seat) => {
+                                            const isSelected =
+                                              selectedSeatNumbers[
+                                                busKey
+                                              ]?.includes(seat.Seat_Number);
+                                            return (
+                                              <div
+                                                key={seat.Seat_Key}
+                                                onClick={() =>
+                                                  seat.Bookable &&
+                                                  handleSeatSelect(busKey, seat)
+                                                } // Prevent selection if not bookable
+                                                className={`h-8 flex items-center  text-xs justify-between px-2 border rounded cursor-pointer transition-all duration-200
+                                                  ${
+                                                    seat.Bookable === false
+                                                      ? "bg-gray/50 border-gray text-gray font-semibold cursor-not-allowed"
+                                                      : ""
+                                                  }     ${
+                                                  isSelected
+                                                    ? "bg-yellow/50 text-yellow font-semibold text-lg border-yellow"
+                                                    : ""
+                                                } 
+    ${seat.Bookable && !isSelected ? "bg-white" : ""} 
+    ${seat.Length === "2" ? "w-16" : "w-8"}
+  `}
+                                              >
+                                                <p> {seat.Seat_Number}</p>
+                                                {seat.Length === "2" ? (
+                                                  <span
+                                                    className={`h-5 w-2 border rounded-lg ${
+                                                      isSelected
+                                                        ? "border-yellow"
+                                                        : ""
+                                                    } ${
+                                                      seat.Bookable === false
+                                                        ? " border-gray "
+                                                        : ""
+                                                    }  `}
+                                                  ></span>
+                                                ) : null}
+                                              </div>
+                                            );
+                                          })}
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {/* Upper Berth */}
+                                  <h3 className="text-center font-bold text-lg my-2">
+                                    Upper Berth
+                                  </h3>
+                                  <div className="flex flex-col gap-2 p-2 w-fit mx-auto">
+                                    {sortedRows.map((rowIndex) => (
+                                      <div
+                                        key={rowIndex}
+                                        className="flex gap-2 justify-center"
+                                      >
+                                        {groupedSeats[rowIndex]
+                                          .filter((seat) => seat.ZIndex === "1") // Only Upper Berth
+                                          .map((seat) => {
+                                            const isSelected =
+                                              selectedSeatNumbers[
+                                                busKey
+                                              ]?.includes(seat.Seat_Number);
+                                            return (
+                                              <div
+                                                key={seat.Seat_Key}
+                                                onClick={() =>
+                                                  seat.Bookable &&
+                                                  handleSeatSelect(busKey, seat)
+                                                } // Prevent selection if not bookable
+                                                className={`h-8 flex items-center text-xs justify-between px-2 border rounded cursor-pointer transition-all duration-200
+                  ${
+                    seat.Bookable === false
+                      ? "bg-gray/50 border-gray text-gray font-semibold cursor-not-allowed"
+                      : ""
+                  } 
+    ${isSelected ? "bg-green-500 text-white" : ""} 
+    ${
+      isSelected
+        ? "bg-yellow/50 text-yellow font-semibold text-lg border-yellow"
+        : ""
+    }     ${seat.Length === "2" ? "w-16" : "w-8"}
+                `}
+                                              >
+                                                <p> {seat.Seat_Number}</p>
+                                                {seat.Length === "2" ? (
+                                                  <span
+                                                    className={`h-5 w-2 border rounded-lg ${
+                                                      isSelected
+                                                        ? "border-yellow"
+                                                        : ""
+                                                    }  ${
+                                                      seat.Bookable === false
+                                                        ? " border-gray "
+                                                        : ""
+                                                    } `}
+                                                  ></span>
+                                                ) : null}
+                                              </div>
+                                            );
+                                          })}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Pickup & Drop Selection */}
+                              <div className="relative w-full md:w-1/2 bg-white rounded-lg shadow-md flex flex-col">
+                                <div className="flex items-center justify-between bg-grayLight px-4 py-2 rounded-t-lg">
+                                  <h2 className="text-sm font-semibold text-gray-800 text-center">
+                                    Select Pickup & Drop
+                                  </h2>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 px-2 py-4 h-full flex-grow mb-32">
+                                  {/* Pickup Points */}
+                                  <div className="border border-gray-300 rounded-md bg-gray-50 shadow-sm flex flex-col h-[500px]">
+                                    <div className="flex items-center justify-between bg-grayLight px-2 py-1 rounded-t-sm">
+                                      <h2 className="text-sm font-semibold text-gray-800 text-center">
+                                        Pick Up Point
+                                      </h2>
+                                    </div>
+                                    <ul className="list-none space-y-2 overflow-auto flex-grow">
+                                      {busPickup.map((point, index) => (
+                                        <li
+                                          key={index}
+                                          className="p-2 border-b bg-white"
+                                        >
+                                          <label className="flex items-start gap-2 cursor-pointer">
+                                            <input
+                                              type="radio"
+                                              name="pickup"
+                                              checked={
+                                                selectedPickup["pickup"]
+                                                  ?.Boarding_Id ===
+                                                point.Boarding_Id
+                                              }
+                                              onChange={() =>
+                                                handlePickupSelection(
+                                                  "pickup",
+                                                  point
                                                 )
                                               }
-                                            >
-                                              {seat}
-                                            </button>
-                                          )
-                                        )}
-                                      </div>
-                                    )
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Pickup & Drop Selection Section */}
-
-                            <div className="relative w-full md:w-1/2  rounded-lg shadow-md flex flex-col  bg-white">
-                              <div className="flex items-center justify-between bg-grayLight px-4 py-2 rounded-t-lg">
-                                <h2 className="text-sm font-semibold text-gray-800 text-center">
-                                  Select Pickup & Drop
-                                </h2>
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 px-2 py-4 h-full flex-grow mb-32">
-                                {/* Pickup Points */}
-                                <div className="border border-gray-300 rounded-md bg-gray-50 shadow-sm flex flex-col h-[500px]">
-                                  <div className="flex items-center justify-between bg-grayLight px-2 py-1 rounded-t-sm">
-                                    <h2 className="text-sm font-semibold text-gray-800 text-center">
-                                      Pick Up Point
-                                    </h2>
+                                              className="accent-yellow-600 mt-1"
+                                            />
+                                            <div>
+                                              <p className="font-semibold">
+                                                {point.Boarding_Name}
+                                              </p>
+                                              <p className="text-sm text-gray-600">
+                                                {point.Boarding_Address}
+                                              </p>
+                                              <p className="text-sm text-gray-600">
+                                                Landmark:{" "}
+                                                {point.Boarding_Landmark}
+                                              </p>
+                                              <p className="text-sm text-gray-600">
+                                                Contact:{" "}
+                                                {point.Boarding_Contact}
+                                              </p>
+                                              <p className="text-sm text-gray-600">
+                                                Time: {point.Boarding_Time}
+                                              </p>
+                                            </div>
+                                          </label>
+                                        </li>
+                                      ))}
+                                    </ul>
                                   </div>
-                                  <ul className="list-none space-y-2 overflow-auto flex-grow">
-                                    {busPickup.map((point, index) => (
-                                      <li
-                                        key={index}
-                                        className="p-2 border-b bg-white"
-                                      >
-                                        <label className="flex items-start gap-2 cursor-pointer">
-                                          <input
-                                            type="radio"
-                                            name="pickup"
-                                            checked={
-                                              selectedPickup["pickup"]
-                                                ?.Boarding_Id ===
-                                              point.Boarding_Id
-                                            }
-                                            onChange={() =>
-                                              handlePickupSelection(
-                                                "pickup",
-                                                point
-                                              )
-                                            }
-                                            className="accent-yellow-600 mt-1"
-                                          />
-                                          <div>
-                                            <p className="font-semibold">
-                                              {point.Boarding_Name}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                              {point.Boarding_Address}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                              Landmark:{" "}
-                                              {point.Boarding_Landmark}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                              Contact: {point.Boarding_Contact}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                              Time: {point.Boarding_Time}
-                                            </p>
-                                          </div>
-                                        </label>
-                                      </li>
-                                    ))}
-                                  </ul>
+
+                                  {/* Drop Points */}
+                                  <div className="border border-gray-300 rounded-md bg-gray-50 shadow-sm flex flex-col h-[500px]">
+                                    <div className="flex items-center justify-between bg-grayLight px-2 py-1 rounded-t-sm">
+                                      <h2 className="text-sm font-semibold text-gray-800 text-center">
+                                        Drop Off Point
+                                      </h2>
+                                    </div>
+                                    <ul className="list-none space-y-2 overflow-auto flex-grow">
+                                      {busDrop.map((point, index) => (
+                                        <li
+                                          key={index}
+                                          className="p-2 border-b bg-white"
+                                        >
+                                          <label className="flex items-start gap-2 cursor-pointer">
+                                            <input
+                                              type="radio"
+                                              name="drop"
+                                              checked={
+                                                selectedDrop["drop"]
+                                                  ?.Dropping_Id ===
+                                                point.Dropping_Id
+                                              }
+                                              onChange={() =>
+                                                handleDropSelection(
+                                                  "drop",
+                                                  point
+                                                )
+                                              }
+                                              className="accent-yellow-600 mt-1"
+                                            />
+                                            <div>
+                                              <p className="font-semibold">
+                                                {point.Dropping_Name}
+                                              </p>
+                                              <p className="text-sm text-gray-600">
+                                                {point.Dropping_Address}
+                                              </p>
+                                              <p className="text-sm text-gray-600">
+                                                Landmark:{" "}
+                                                {point.Dropping_Landmark}
+                                              </p>
+                                              <p className="text-sm text-gray-600">
+                                                Contact:{" "}
+                                                {point.Dropping_Contact}
+                                              </p>
+                                              <p className="text-sm text-gray-600">
+                                                Time: {point.Dropping_Time}
+                                              </p>
+                                            </div>
+                                          </label>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
                                 </div>
 
-                                {/* Drop Points */}
-                                <div className="border border-gray-300 rounded-md bg-gray-50 shadow-sm flex flex-col h-[500px]">
-                                  <div className="flex items-center justify-between bg-grayLight px-2 py-1 rounded-t-sm">
-                                    <h2 className="text-sm font-semibold text-gray-800 text-center">
-                                      Drop Off Point
-                                    </h2>
+                                <div className="absolute p-2 bottom-0 w-full border-t">
+                                  <div>
+                                    <p className="text-black font-semibold text-lg">
+                                      Selected Seats
+                                    </p>
+                                    <p>No Seats selected yet</p>
                                   </div>
-                                  <ul className="list-none space-y-2 overflow-auto flex-grow">
-                                    {busDrop.map((point, index) => (
-                                      <li
-                                        key={index}
-                                        className="p-2 border-b bg-white"
-                                      >
-                                        <label className="flex items-start gap-2 cursor-pointer">
-                                          <input
-                                            type="radio"
-                                            name="drop"
-                                            checked={
-                                              selectedDrop["drop"]
-                                                ?.Dropping_Id ===
-                                              point.Dropping_Id
-                                            }
-                                            onChange={() =>
-                                              handleDropSelection("drop", point)
-                                            }
-                                            className="accent-yellow-600 mt-1"
-                                          />
-                                          <div>
-                                            <p className="font-semibold">
-                                              {point.Dropping_Name}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                              {point.Dropping_Address}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                              Landmark:{" "}
-                                              {point.Dropping_Landmark}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                              Contact: {point.Dropping_Contact}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                              Time: {point.Dropping_Time}
-                                            </p>
-                                          </div>
-                                        </label>
-                                      </li>
-                                    ))}
-                                  </ul>
+                                  <button className="bg-yellow text-white text-lg font-semibold w-full rounded-lg py-2">
+                                    Continue
+                                  </button>
                                 </div>
-                              </div>
-                              <div className="absolute p-2 bottom-0 w-full border-t">
-                                <div>
-                                  <p className="text-black font-semibold text-lg">
-                                    Selected Seats
-                                  </p>
-                                  <p>No Seats selected yet</p>
-                                </div>
-                                <button className="bg-yellow text-white text-lg font-semibold w-full rounded-lg py-2">
-                                  Continue
-                                </button>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <div className="flex flex-col items-center justify-center text-gray-500 p-4">
                 <Ban size={50} className="mb-2 text-red-500" />{" "}
