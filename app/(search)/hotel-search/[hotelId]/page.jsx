@@ -7,11 +7,12 @@ import { HOTEL_LISTS } from "@/constants/data/hotel-data";
 import { priceRanges } from "@/constants/data/priceRange";
 import { propertyType } from "@/constants/data/propertyType";
 import { ratingStar } from "@/constants/data/ratingStar";
+import axios from "axios";
 import { Filter } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const datePrice = [
   { id: "Sun, 25 Aug", price: "$125" },
@@ -25,10 +26,9 @@ const datePrice = [
 
 export default function Page() {
   const router = useRouter();
-  const [selectedTripType, setSelectedTripType] = useState("One Way");
-  const [selectedFareType, setSelectedFareType] = useState("Regular");
   const [viewPriceSection, setViewPriceSection] = useState(false);
-const [isModalOpenFilter, setModalOpenFilter] = useState(false);
+  const [isModalOpenFilter, setModalOpenFilter] = useState(false);
+  const [hotelList,setHotelList] = useState([])
   const handleModalToggle = () => {
     setModalOpenFilter(!isModalOpenFilter);
   };
@@ -36,25 +36,67 @@ const [isModalOpenFilter, setModalOpenFilter] = useState(false);
   function handleViewPriceSection() {
     setViewPriceSection(!viewPriceSection);
   }
+useEffect(()=>{
+  getHotelListFirstCall()
+},[])
+
+const getHotelListFirstCall = async () => {
+  try {
+    const response = await axios.get(
+      "https://nexus.prod.zentrumhub.com/api/hotel/availability/async/269df81c-edb8-470f-979e-78162d561db0/results",
+      {
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          accountId: "zentrum-demo-account",
+          "customer-ip": "54.86.50.139",
+          correlationId: "6b79055c-3b28-a325-0d5f-72c8f654b345",
+          apiKey: "demo123",
+        },
+      }
+    );
+
+    if (response.status === 200) {
+      console.log("Fetched hotel list:", response.data.hotels);
+      setHotelList(response?.data?.hotels);
+    } else {
+      console.log("Failed to fetch availability:", response.status);
+    }
+  } catch (error) {
+    console.error("Error during hotel availability search:", error);
+  }
+};
+
 
   return (
     <div className="md:container   flex flex-col gap-4">
       <div className="bg-yellow flex items-center justify-between md:hidden py-4 px-3 md:px-10 shadow-lg">
         <span className="flex items-center gap-3">
           <button>
-            <Image src="/icons/arrow.png" className="w-4 h-4 md:h-6 md:w-6" width={100} height={100} alt="Hotel img" />
+            <Image
+              src="/icons/arrow.png"
+              className="w-4 h-4 md:h-6 md:w-6"
+              width={100}
+              height={100}
+              alt="Hotel img"
+            />
           </button>
 
           <p className="text-white font-semibold text-lg">Ahmedabad, Gujrat</p>
         </span>
 
         <button onClick={handleModalToggle}>
-          <Image src="/icons/filter.png" width={100} height={100} className="w-6 h-6" alt="Hotel img" />
+          <Image
+            src="/icons/filter.png"
+            width={100}
+            height={100}
+            className="w-6 h-6"
+            alt="Hotel img"
+          />
         </button>
       </div>
       <FilterModalHotel
-      isOpen={isModalOpenFilter}
-      onClose={handleModalToggle}
+        isOpen={isModalOpenFilter}
+        onClose={handleModalToggle}
       />
       <div className=" grid-cols-5 py-10 bg-white rounded-xl hidden md:grid w-full ">
         <div className="border rounded-l-xl p-4">
@@ -166,14 +208,26 @@ const [isModalOpenFilter, setModalOpenFilter] = useState(false);
               <span className="w-full">
                 <p className="font-medium">Search Hotel</p>
                 <span className="flex items-center gap-3 border p-1 rounded-lg w-full ">
-                  <Image src="/icons/search.png" width={100} height={100} className="w-4 h-4" alt="Hotel img"/>
+                  <Image
+                    src="/icons/search.png"
+                    width={100}
+                    height={100}
+                    className="w-4 h-4"
+                    alt="Hotel img"
+                  />
                   <input type="text" placeholder="Search" className="w-full" />
                 </span>
               </span>
               <span className="w-full ">
                 <p className="font-medium">Search Location</p>
                 <span className="flex items-center gap-3 border p-1 rounded-lg w-full ">
-                  <Image src="/icons/search.png" width={100} height={100} className="w-4 h-4" alt="Hotel img"/>
+                  <Image
+                    src="/icons/search.png"
+                    width={100}
+                    height={100}
+                    className="w-4 h-4"
+                    alt="Hotel img"
+                  />
                   <input type="text" placeholder="Search" className="w-full" />
                 </span>
               </span>
@@ -216,7 +270,7 @@ const [isModalOpenFilter, setModalOpenFilter] = useState(false);
                     htmlFor={range.id}
                     className="text-sm text-gray-700 flex items-center gap-1"
                   >
-                    {Array.from({ length: range.count }, (_, index) => (
+                    {/* {Array.from({ length: range.count }, (_, index) => (
                       <Image
                         key={index}
                         src="/icons/starFilter.png"
@@ -225,7 +279,7 @@ const [isModalOpenFilter, setModalOpenFilter] = useState(false);
                         alt={`${range.count} stars`}
                         className="w-4 h-4"
                       />
-                    ))}
+                    ))} */}
                   </label>
                 </div>
               ))}
@@ -256,7 +310,7 @@ const [isModalOpenFilter, setModalOpenFilter] = useState(false);
         <div className=" rounded-xl overflow-y-auto p-0 flex-1">
           {/* Flight Details */}
           <div className="mt-0 flex flex-col gap-4">
-            {HOTEL_LISTS.map((el) => (
+            {hotelList.map((el) => (
               <div key={el.id}>
                 <Link
                   href={`/hotel-search/explore/7897868796gasyudcg78`}
@@ -264,15 +318,15 @@ const [isModalOpenFilter, setModalOpenFilter] = useState(false);
                 >
                   {/* Images Section */}
                   <div className="flex flex-col md:flex-row gap-4">
-                    <Image
+                    {/* <Image
                       src={el.images[0]}
                       alt="Hotel Image"
                       width={100}
                       height={100}
                       className="rounded-lg w-full md:w-[200px] h-[200px] object-cover"
-                    />
+                    /> */}
                     <div className="flex md:flex-col gap-2">
-                      <Image
+                      {/* <Image
                         src={el.images[1]}
                         alt="Hotel Image"
                         width={100}
@@ -285,7 +339,7 @@ const [isModalOpenFilter, setModalOpenFilter] = useState(false);
                         width={100}
                         height={100}
                         className="rounded-lg h-[100px] md:w-[100px] w-[50%] object-cover"
-                      />
+                      /> */}
                     </div>
                   </div>
 
@@ -300,7 +354,7 @@ const [isModalOpenFilter, setModalOpenFilter] = useState(false);
                       <p className="mb-2 text-sm font-medium">
                         Property Offers
                       </p>
-                      <div className="flex flex-wrap gap-2">
+                      {/* <div className="flex flex-wrap gap-2">
                         {el.propertyOffers.map((offer, index) => (
                           <p
                             key={index}
@@ -309,9 +363,9 @@ const [isModalOpenFilter, setModalOpenFilter] = useState(false);
                             {offer}
                           </p>
                         ))}
-                      </div>
+                      </div> */}
                     </div>
-                    <ul>
+                    {/* <ul>
                       {el.description.map((description, index) => (
                         <li
                           key={index}
@@ -320,7 +374,7 @@ const [isModalOpenFilter, setModalOpenFilter] = useState(false);
                           {description}
                         </li>
                       ))}
-                    </ul>
+                    </ul> */}
                   </div>
 
                   {/* Price and Rating Section */}

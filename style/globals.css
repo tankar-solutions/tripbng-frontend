@@ -190,3 +190,11 @@
   background-color: #f2f9fc;
   color: #333;
 }
+.custom-range-picker .ant-picker-input > input {
+  font-size: 1.3rem;
+  font-weight: 700;  
+}
+
+.custom-range-picker .ant-picker {
+  height: 50px;
+}
