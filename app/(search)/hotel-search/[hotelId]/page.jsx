@@ -1,6 +1,7 @@
 "use client";
 
 import FilterModalHotel from "@/components/FilterModalHotel";
+import Simmer from "@/components/layout/simmer";
 import Button from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
 import { HOTEL_LISTS } from "@/constants/data/hotel-data";
@@ -11,7 +12,7 @@ import axios from "axios";
 import { Filter } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 const datePrice = [
@@ -25,44 +26,160 @@ const datePrice = [
 ];
 
 export default function Page() {
-  const router = useRouter();
+  const params = useParams();
+  const token = params.hotelId;
+  const searchParams = useSearchParams();
   const [viewPriceSection, setViewPriceSection] = useState(false);
   const [isModalOpenFilter, setModalOpenFilter] = useState(false);
-  const [hotelList,setHotelList] = useState([])
+  const [hotelList, setHotelList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [details, setDetails] = useState({
+    city: "",
+    checkIn: "",
+    checkOut: "",
+    rooms: "",
+  });
+
+
+
+  // const handleModalToggle = () => {
+  //   setModalOpenFilter(!isModalOpenFilter);
+  // };
+
+  // const handleViewPriceSection = () => {
+  //   setViewPriceSection(!viewPriceSection);
+  // };
+  useEffect(() => {
+    if (token) {
+      getHotelList(token);
+    } else {
+      console.error("Token is missing from URL");
+    }
+  }, [token]);
+
+  useEffect(() => {
+    const query = decodeURIComponent(searchParams?.toString());
+    if (query) {
+      const [city, checkIn, checkOut, rooms] = query.split("/");
+      const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString("en-US", {
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+        });
+      };
+      setDetails({
+        city,
+        checkIn: formatDate(checkIn),
+        checkOut: formatDate(checkOut),
+        rooms: rooms.replace("=", ""),
+      });
+    }
+  }, [searchParams]);
+
   const handleModalToggle = () => {
     setModalOpenFilter(!isModalOpenFilter);
   };
 
-  function handleViewPriceSection() {
+  const handleViewPriceSection = () => {
     setViewPriceSection(!viewPriceSection);
-  }
-useEffect(()=>{
-  getHotelListFirstCall()
-},[])
+  };
 
-const getHotelListFirstCall = async () => {
-  try {
-    const response = await axios.get(
-      "https://nexus.prod.zentrumhub.com/api/hotel/availability/async/269df81c-edb8-470f-979e-78162d561db0/results",
-      {
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-          accountId: "zentrum-demo-account",
-          "customer-ip": "54.86.50.139",
-          correlationId: "6b79055c-3b28-a325-0d5f-72c8f654b345",
-          apiKey: "demo123",
-        },
+  const getHotelAvailability = async (token) => {
+    try {
+      const response = await axios.get(
+        `https://nexus.prod.zentrumhub.com/api/hotel/availability/async/${token}/results`,
+        {
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            accountId: "zentrum-demo-account",
+            "customer-ip": "54.86.50.139",
+            correlationId: "5e860c0f-a6a6-1d48-c74e-71f580463d73",
+            apiKey: "demo123",
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        return response?.data?.hotels || [];
       }
-    );
-
-    if (response.status === 200) {
-      console.log("Fetched hotel list:", response.data.hotels);
-      setHotelList(response?.data?.hotels);
-    } else {
-      console.log("Failed to fetch availability:", response.status);
+      console.error("Failed to fetch availability:", response.status);
+      return [];
+    } catch (error) {
+      console.error("Error fetching hotel availability:", error);
+      return [];
     }
+  };
+
+  const getHotelContent = async (circularLat, circularLong, channelId) => {
+    try {
+      const response = await axios.post(
+        "https://nexus.prod.zentrumhub.com/api/content/hotelcontent/getHotelContent",
+        {
+          channelId: "client-demo-channel", // dynamic channelId
+          circularRegion: {
+            centerLat: "23.022511", // dynamic latitude
+            centerLong: "72.571353", // dynamic longitude
+            radiusInKm: 30,
+          },
+          culture: "en-US",
+          contentFields: ["Basic"],
+          distanceFrom: {
+            lat: circularLat, // dynamic latitude
+            long: circularLong, // dynamic longitude
+          },
+          filterBy: {
+            ratings: {
+              min: 4,
+              max: 5,
+            },
+          },
+        },
+        {
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Accept-Encoding": "gzip, deflate",
+            "customer-ip": "54.86.50.139",
+            "correlationId": "58497bbd-8c3c-72e3-c981-46825d71b261",
+            "accountId": "zentrum-demo-account",
+            "apiKey": "demo123",
+          },
+        }
+      );
+  
+      if (response.status === 200) {
+        return response?.data?.hotels || [];
+      }
+      console.error("Failed to fetch hotel content:", response.status);
+      return [];
+    } catch (error) {
+      console.error("Error fetching hotel content:", error);
+      return [];
+    }
+  };
+  
+
+  const getHotelList = async (token) => {
+  setLoading(true);
+  try {
+    const contentList = await getHotelContent();
+
+    // Ensure contentList has valid data
+    const mergedHotels = contentList.map((hotel) => ({
+      id: hotel.id,
+      name: hotel.name,
+      image: hotel.heroImage || "https://via.placeholder.com/300x200?text=No+Image",
+      location: hotel.contact?.address?.city?.name || "Unknown Location",
+      rating: hotel.starRating || "N/A",
+      distance: hotel.distance || "N/A",
+    }));
+
+    setHotelList(mergedHotels);
   } catch (error) {
-    console.error("Error during hotel availability search:", error);
+    console.error("Error fetching hotel list:", error);
+  } finally {
+    setLoading(false);
   }
 };
 
@@ -101,19 +218,19 @@ const getHotelListFirstCall = async () => {
       <div className=" grid-cols-5 py-10 bg-white rounded-xl hidden md:grid w-full ">
         <div className="border rounded-l-xl p-4">
           <p className="text-sm">CITY, AREA or PROPERTY</p>
-          <p className="text-md font-semibold">Hard rock hotel goa</p>
+          <p className="text-md font-semibold">{details.city}</p>
         </div>
         <div className="border p-4">
           <p className="text-sm">Check-In</p>
-          <p className="text-md font-semibold">Fri, 17 Jan 2025 </p>
+          <p className="text-md font-semibold">{details.checkIn}</p>
         </div>
         <div className="border p-4">
           <p className="text-sm">Check-Out </p>
-          <p className="text-md font-semibold">Wed, 28 Aug</p>
+          <p className="text-md font-semibold">{details.checkOut}</p>
         </div>
         <div className="border p-4">
           <p className="text-sm">Rooms & Guests</p>
-          <p className="text-md font-semibold">1 Room, 2 Adults</p>
+          <p className="text-md font-semibold">{details.rooms} Room(s)</p>
         </div>
         <div className="border p-4 rounded-r-xl flex items-center">
           <Button
@@ -307,120 +424,55 @@ const getHotelListFirstCall = async () => {
         </div>
 
         {/* Flight Options Section */}
-        <div className=" rounded-xl overflow-y-auto p-0 flex-1">
-          {/* Flight Details */}
-          <div className="mt-0 flex flex-col gap-4">
-            {hotelList.map((el) => (
-              <div key={el.id}>
-                <Link
-                  href={`/hotel-search/explore/7897868796gasyudcg78`}
-                  className="bg-white p-4 md:p-6 rounded-xl shadow-lg flex flex-col md:flex-row justify-between gap-4"
-                >
-                  {/* Images Section */}
-                  <div className="flex flex-col md:flex-row gap-4">
-                    {/* <Image
-                      src={el.images[0]}
-                      alt="Hotel Image"
-                      width={100}
-                      height={100}
-                      className="rounded-lg w-full md:w-[200px] h-[200px] object-cover"
-                    /> */}
-                    <div className="flex md:flex-col gap-2">
-                      {/* <Image
-                        src={el.images[1]}
-                        alt="Hotel Image"
-                        width={100}
-                        height={100}
-                        className="rounded-lg h-[100px] md:w-[100px] w-[50%] object-cover"
-                      />
-                      <Image
-                        src={el.images[2]}
-                        alt="Hotel Image"
-                        width={100}
-                        height={100}
-                        className="rounded-lg h-[100px] md:w-[100px] w-[50%] object-cover"
-                      /> */}
-                    </div>
-                  </div>
+        {loading ? (
+          <Simmer />
+        ) : (
+          <div className=" rounded-xl overflow-y-auto p-0 flex-1">
+            {/* Flight Details */}
+            <div className="mt-0 flex flex-col gap-4">
+            {hotelList.map((hotel) => (
+  <div key={hotel.id} className="bg-white p-4 md:p-6 rounded-xl shadow-lg flex flex-col md:flex-row justify-between gap-4">
+    {/* Hotel Image */}
+    <div className="flex-shrink-0 w-full md:w-[200px] h-[200px]">
+      <img
+        src={hotel.image}
+        alt={hotel.name}
+        className="rounded-lg w-full h-full object-cover"
+      />
+    </div>
 
-                  {/* Hotel Information Section */}
-                  <div className="flex flex-col gap-3 flex-1">
-                    <div className="flex items-center justify-between gap-4">
-                      <h4 className="text-lg font-semibold">{el.title}</h4>
-                      <p className="text-sm">{el.rating} Star</p>
-                    </div>
-                    <p className="text-sm text-blue">{el.location}</p>
-                    <div>
-                      <p className="mb-2 text-sm font-medium">
-                        Property Offers
-                      </p>
-                      {/* <div className="flex flex-wrap gap-2">
-                        {el.propertyOffers.map((offer, index) => (
-                          <p
-                            key={index}
-                            className="text-sm text-gray-500 px-2 py-1 rounded-md border"
-                          >
-                            {offer}
-                          </p>
-                        ))}
-                      </div> */}
-                    </div>
-                    {/* <ul>
-                      {el.description.map((description, index) => (
-                        <li
-                          key={index}
-                          className="text-sm text-green-500 list-inside list-disc"
-                        >
-                          {description}
-                        </li>
-                      ))}
-                    </ul> */}
-                  </div>
+    {/* Hotel Information */}
+    <div className="flex flex-col gap-3 flex-1">
+      <div className="flex items-center justify-between gap-4">
+        <h4 className="text-lg font-semibold">{hotel.name}</h4>
+        <p className="text-sm">{hotel.rating} Stars</p>
+      </div>
+      <p className="text-sm text-blue">{hotel.location}</p>
+    </div>
 
-                  {/* Price and Rating Section */}
-                  <div className="md:border-l md:px-4 px-1 flex flex-row md:flex-col justify-between items-start md:items-center gap-4">
-                    {/* Rating and Reviews Section */}
-                    <div>
-                      <div className="flex flex-col gap-1">
-                        <p className="text-sm font-medium">Excellent</p>
-                        <span className="text-xs text-gray-500">
-                          (687 Ratings)
-                        </span>
-                      </div>
+    {/* Pricing Section */}
+    <div className="md:border-l md:px-4 px-1 flex flex-col justify-center items-center">
+      <p className="text-yellow text-xl font-semibold">
+        {hotel.totalRate !== "N/A" ? `₹${hotel.totalRate}` : "Price Not Available"}
+      </p>
+      <p className="text-sm text-gray-500">Per Night</p>
+    </div>
+  </div>
+))}
 
-                      {/* Rating Button */}
-                      <div className="flex gap-2 items-center mt-2">
-                        <button className="text-sm rounded-md bg-yellow text-white px-3 py-2">
-                          4.2
-                        </button>
-                        <button className="text-sm rounded-md bg-blue/10 text-blue px-4 py-1">
-                          Offer/Notes
-                        </button>
-                      </div>
-                    </div>
+{/* Cashback Offer */}
+{hotelList.length > 0 && (
+  <div className="bg-blue rounded-lg px-4 py-1 mt-2">
+    <p className="text-sm text-white">
+      Get INR 742 Cashback on payments via credit/debit cards
+    </p>
+  </div>
+)}
 
-                    {/* Pricing Section */}
-                    <div className="flex flex-col gap-1 text-sm text-gray-500 items-end">
-                      <p>Per Night</p>
-                      <p>Excluded fees & Taxes</p>
-                      <p className="text-yellow text-lg font-semibold">
-                        {el.priceRange}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
 
-                {/* Cashback Offer */}
-                <div className="bg-blue rounded-lg px-4 py-1 mt-2">
-                  <p className="text-sm text-white">
-                    Get INR 742 Cashback to Card on payments via credit/debit
-                    cards
-                  </p>
-                </div>
-              </div>
-            ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

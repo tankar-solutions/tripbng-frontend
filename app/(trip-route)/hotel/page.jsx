@@ -40,6 +40,9 @@ export default function Hotel() {
     dayjs().add(1, "day").format("YYYY-MM-DD")
   );
 
+  
+console.log(selectedLocation);
+
   // Select pax details
   const toggleDropdownPax = () => setOpen(!open);
 
@@ -177,14 +180,15 @@ export default function Hotel() {
             "Accept-Encoding": "gzip, deflate",
             accountId: "zentrum-demo-account",
             "customer-ip": "54.86.50.139",
-            correlationId: "6b79055c-3b28-a325-0d5f-72c8f654b345",
+            correlationId: "5e860c0f-a6a6-1d48-c74e-71f580463d73",
             apiKey: "demo123",
           },
         }
       );
 
       if (response.status === 202) {
-        const searchUrl = `/hotel-search/${selectedLocation.name}-${checkIn}-${checkOut}-${rooms.length}`;
+        const token = response.data.token;
+        const searchUrl = `/hotel-search/${token}?${selectedLocation.name}/${checkIn}/${checkOut}/${rooms.length}`;
         router.push(searchUrl);
       } else {
         console.log("Failed to fetch availability:", response.status);
