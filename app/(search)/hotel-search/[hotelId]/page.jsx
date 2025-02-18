@@ -32,6 +32,8 @@ export default function Page() {
   const [viewPriceSection, setViewPriceSection] = useState(false);
   const [isModalOpenFilter, setModalOpenFilter] = useState(false);
   const [hotelList, setHotelList] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [totalHotelFound, setTotalHotelFound] = useState(0);
   const [loading, setLoading] = useState(false);
   const [details, setDetails] = useState({
     city: "",
@@ -40,50 +42,63 @@ export default function Page() {
     rooms: "",
   });
 
-
-
-  // const handleModalToggle = () => {
-  //   setModalOpenFilter(!isModalOpenFilter);
-  // };
-
-  // const handleViewPriceSection = () => {
-  //   setViewPriceSection(!viewPriceSection);
-  // };
   useEffect(() => {
-    if (token) {
-      getHotelList(token);
+    const savedLocation = localStorage.getItem("selectedLocation");
+    if (savedLocation) {
+      const parsedLocation = JSON.parse(savedLocation);
+      setSelectedLocation(parsedLocation);
+      console.log("Coordinates loaded:", parsedLocation.coordinates);
     } else {
-      console.error("Token is missing from URL");
+      console.error("No location found in localStorage.");
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
-    const query = decodeURIComponent(searchParams?.toString());
-    if (query) {
-      const [city, checkIn, checkOut, rooms] = query.split("/");
-      const formatDate = (dateStr) => {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString("en-US", {
-          weekday: "short",
-          day: "2-digit",
-          month: "short",
-        });
-      };
-      setDetails({
-        city,
-        checkIn: formatDate(checkIn),
-        checkOut: formatDate(checkOut),
-        rooms: rooms.replace("=", ""),
-      });
+    if (selectedLocation) {
+      getHotelList();
     }
-  }, [searchParams]);
+  }, [selectedLocation]);
 
-  const handleModalToggle = () => {
-    setModalOpenFilter(!isModalOpenFilter);
-  };
+  const getHotelList = async () => {
+    if (!selectedLocation) {
+      console.error("Location data is missing.");
+      return;
+    }
 
-  const handleViewPriceSection = () => {
-    setViewPriceSection(!viewPriceSection);
+    setLoading(true);
+    try {
+      // Step 1: Fetch hotel content (name, image, rating)
+      const contentList = await getHotelContent(
+        selectedLocation.coordinates.lat,
+        selectedLocation.coordinates.long,
+        "client-demo-channel"
+      );
+
+      // Step 2: Fetch hotel availability (rate, availability)
+      const availabilityList = await getHotelAvailability(token);
+
+      // Step 3: Merge availability data with content data
+      const mergedHotels = contentList.map((hotelContent) => {
+        const availability = availabilityList.find((availability) => availability.id === hotelContent.id);
+
+        return {
+          id: hotelContent.id,
+          name: hotelContent.name || "Unknown Hotel",
+          image: hotelContent.heroImage || "https://via.placeholder.com/300x200?text=No+Image",
+          location: hotelContent.contact?.address?.city?.name || "Unknown Location",
+          rating: hotelContent.starRating || "N/A",
+          distance: hotelContent.distance || "N/A",
+          availability: availability?.availableRooms || "Unknown",
+          rate: availability?.rate || null, // Initially null, to be updated with rates
+        };
+      });
+
+      setHotelList(mergedHotels);
+    } catch (error) {
+      console.error("Error fetching hotel list:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getHotelAvailability = async (token) => {
@@ -102,6 +117,7 @@ export default function Page() {
       );
 
       if (response.status === 200) {
+        setTotalHotelFound(response?.data?.completedHotelCount);
         return response?.data?.hotels || [];
       }
       console.error("Failed to fetch availability:", response.status);
@@ -117,17 +133,17 @@ export default function Page() {
       const response = await axios.post(
         "https://nexus.prod.zentrumhub.com/api/content/hotelcontent/getHotelContent",
         {
-          channelId: "client-demo-channel", // dynamic channelId
+          channelId: "client-demo-channel",
           circularRegion: {
-            centerLat: "23.022511", // dynamic latitude
-            centerLong: "72.571353", // dynamic longitude
+            centerLat: circularLat,
+            centerLong: circularLong,
             radiusInKm: 30,
           },
           culture: "en-US",
           contentFields: ["Basic"],
           distanceFrom: {
-            lat: circularLat, // dynamic latitude
-            long: circularLong, // dynamic longitude
+            lat: circularLat,
+            long: circularLong,
           },
           filterBy: {
             ratings: {
@@ -139,15 +155,14 @@ export default function Page() {
         {
           headers: {
             "Content-Type": "application/json; charset=utf-8",
-            "Accept-Encoding": "gzip, deflate",
             "customer-ip": "54.86.50.139",
-            "correlationId": "58497bbd-8c3c-72e3-c981-46825d71b261",
-            "accountId": "zentrum-demo-account",
-            "apiKey": "demo123",
+            correlationId: "58497bbd-8c3c-72e3-c981-46825d71b261",
+            accountId: "zentrum-demo-account",
+            apiKey: "demo123",
           },
         }
       );
-  
+
       if (response.status === 200) {
         return response?.data?.hotels || [];
       }
@@ -158,30 +173,8 @@ export default function Page() {
       return [];
     }
   };
-  
 
-  const getHotelList = async (token) => {
-  setLoading(true);
-  try {
-    const contentList = await getHotelContent();
-
-    // Ensure contentList has valid data
-    const mergedHotels = contentList.map((hotel) => ({
-      id: hotel.id,
-      name: hotel.name,
-      image: hotel.heroImage || "https://via.placeholder.com/300x200?text=No+Image",
-      location: hotel.contact?.address?.city?.name || "Unknown Location",
-      rating: hotel.starRating || "N/A",
-      distance: hotel.distance || "N/A",
-    }));
-
-    setHotelList(mergedHotels);
-  } catch (error) {
-    console.error("Error fetching hotel list:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+    
 
 
   return (
@@ -201,7 +194,7 @@ export default function Page() {
           <p className="text-white font-semibold text-lg">Ahmedabad, Gujrat</p>
         </span>
 
-        <button onClick={handleModalToggle}>
+        <button >
           <Image
             src="/icons/filter.png"
             width={100}
@@ -213,7 +206,7 @@ export default function Page() {
       </div>
       <FilterModalHotel
         isOpen={isModalOpenFilter}
-        onClose={handleModalToggle}
+        // onClose={handleModalToggle}
       />
       <div className=" grid-cols-5 py-10 bg-white rounded-xl hidden md:grid w-full ">
         <div className="border rounded-l-xl p-4">
@@ -248,7 +241,7 @@ export default function Page() {
         {/* Filters Section */}
         <div className="bg-white rounded-xl px-2 py-3 w-1/5 hidden md:block ">
           <span className="border flex rounded-lg w-full p-2 mb-3">
-            <p className="text-sm font-medium">Total 673 hotels found</p>
+            <p className="text-sm font-medium">Total {totalHotelFound} hotels found</p>
           </span>
 
           <span className="border flex flex-col rounded-lg w-full mb-3">
@@ -425,54 +418,80 @@ export default function Page() {
 
         {/* Flight Options Section */}
         {loading ? (
-          <Simmer />
-        ) : (
-          <div className=" rounded-xl overflow-y-auto p-0 flex-1">
-            {/* Flight Details */}
-            <div className="mt-0 flex flex-col gap-4">
-            {hotelList.map((hotel) => (
-  <div key={hotel.id} className="bg-white p-4 md:p-6 rounded-xl shadow-lg flex flex-col md:flex-row justify-between gap-4">
-    {/* Hotel Image */}
-    <div className="flex-shrink-0 w-full md:w-[200px] h-[200px]">
-      <img
-        src={hotel.image}
-        alt={hotel.name}
-        className="rounded-lg w-full h-full object-cover"
-      />
-    </div>
+  <Simmer />
+) : (
+  <div className="rounded-xl overflow-y-auto p-0 flex-1">
+    {/* Flight Details */}
+    <div className="mt-0 flex flex-col gap-4">
+      {hotelList.map((hotel) => {
+        const exchangeRate = 82; // 1 USD = 82 INR (example rate)
+        const priceInINR = hotel.rate && hotel.rate.totalRate
+          ? (hotel.rate.totalRate * exchangeRate).toFixed(2)
+          : null;
 
-    {/* Hotel Information */}
-    <div className="flex flex-col gap-3 flex-1">
-      <div className="flex items-center justify-between gap-4">
-        <h4 className="text-lg font-semibold">{hotel.name}</h4>
-        <p className="text-sm">{hotel.rating} Stars</p>
-      </div>
-      <p className="text-sm text-blue">{hotel.location}</p>
-    </div>
+        return (
+          <div
+            key={hotel.id}
+            className="bg-white p-4 md:p-6 rounded-xl shadow-lg flex flex-col md:flex-row justify-between gap-4 hover:shadow-2xl transition-all ease-in-out duration-300"
+          >
+            {/* Hotel Image */}
+            <div className="flex-shrink-0 w-full md:w-[200px] h-[200px]">
+              <img
+                src={hotel.image}
+                alt={hotel.name}
+                className="rounded-lg w-full h-full object-cover"
+              />
+            </div>
 
-    {/* Pricing Section */}
-    <div className="md:border-l md:px-4 px-1 flex flex-col justify-center items-center">
-      <p className="text-yellow text-xl font-semibold">
-        {hotel.totalRate !== "N/A" ? `₹${hotel.totalRate}` : "Price Not Available"}
-      </p>
-      <p className="text-sm text-gray-500">Per Night</p>
-    </div>
-  </div>
-))}
+            {/* Hotel Information */}
+            <div className="flex flex-col gap-3 flex-1">
+              <div className="flex items-center justify-between gap-4">
+                <h4 className="text-lg font-semibold text-gray-900">{hotel.name}</h4>
+                <p className="text-sm text-yellow-500">{hotel.rating} Stars</p>
+              </div>
+              <p className="text-sm text-blue-600">{hotel.location}</p>
+            </div>
 
-{/* Cashback Offer */}
-{hotelList.length > 0 && (
-  <div className="bg-blue rounded-lg px-4 py-1 mt-2">
-    <p className="text-sm text-white">
-      Get INR 742 Cashback on payments via credit/debit cards
-    </p>
+            {/* Pricing Section */}
+            <div className="md:border-l md:px-4 px-1 flex flex-col justify-center items-center">
+  <p className="text-yellow text-xl font-semibold">
+    {priceInINR === null ? (
+      <div className="w-6 h-6 border-4 border-t-yellow border-gray-200 rounded-full animate-spin"></div> // Rotating loader
+    ) : priceInINR ? (
+      <span>Price: ₹{priceInINR}</span>
+    ) : (
+      <span>Price: Not available</span>
+    )}
+  </p>
+  <p className="text-sm text-gray-500">Per Night</p>
+</div>
+
+          </div>
+        );
+      })}
+
+      {/* Cashback Offer */}
+      {hotelList.length > 0 && (
+        <div className="bg-blue-600 rounded-lg px-4 py-2 mt-2 text-center">
+          <p className="text-sm text-white">
+            Get INR 742 Cashback on payments via credit/debit cards
+          </p>
+        </div>
+      )}
+
+      {/* View More Button */}
+      {hotelList.length > 0 && (
+        <div className="mt-4 text-center">
+          <Link href="#" className="text-blue-600 text-sm font-semibold hover:underline">
+            View More Hotels
+          </Link>
+        </div>
+      )}
+    </div>
   </div>
 )}
 
 
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

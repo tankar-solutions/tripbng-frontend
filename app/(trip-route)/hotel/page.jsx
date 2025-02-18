@@ -138,7 +138,15 @@ console.log(selectedLocation);
       toast.error("Please select a location first.");
       return;
     }
-
+    const cityData = {
+      name: selectedLocation.name,
+      fullName: selectedLocation.fullName,
+      country: selectedLocation.country,
+      coordinates: selectedLocation.coordinates,
+      id: selectedLocation.id,
+    };
+    localStorage.setItem("selectedLocation", JSON.stringify(cityData));
+    console.log("Selected city saved to localStorage:", cityData);
     const payload = {
       channelId: "client-demo-channel",
       currency: "USD",
@@ -177,7 +185,7 @@ console.log(selectedLocation);
         {
           headers: {
             "Content-Type": "application/json; charset=utf-8",
-            "Accept-Encoding": "gzip, deflate",
+            // "Accept-Encoding": "gzip, deflate",
             accountId: "zentrum-demo-account",
             "customer-ip": "54.86.50.139",
             correlationId: "5e860c0f-a6a6-1d48-c74e-71f580463d73",
