@@ -14,6 +14,10 @@ import {
 } from "../ui/select";
 import { VISA_TYPE } from "@/constants/data/visa-data";
 import Image from "next/image";
+import dayjs from "dayjs";
+import axios from "axios";
+
+import { RangePicker } from 'antd';
 const HomeBox = () => {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,7 +26,7 @@ const HomeBox = () => {
   const [activeFilter, setActiveFilter] = useState("oneWay");
   const [searchInput, setSearchInput] = useState("");
   const [stayingDays, setStayingDays] = useState(20);
-    const [visaType, setVisaType] = useState("Visa Gold");
+  const [visaType, setVisaType] = useState("Visa Gold");
   const [selectedCity, setSelectedCity] = useState({ from: "", to: "" });
   const [selectedCityVisa, setSelectedCityVisa] = useState(null);
   const [paxState, setPaxState] = useState({
@@ -41,6 +45,7 @@ const HomeBox = () => {
   const [filteredCityList, setFilteredCityList] = useState([]);
   const [cityList, setCityList] = useState([]);
   const [isCitySearchOpen, setIsCitySearchOpen] = useState(false);
+  const [isHotelSearchOpen, setIsHotelSearchOpen] = useState(false);
   const [isCitySearchOpenVisa, setIsCitySearchOpenVisa] = useState(false);
   const [isPaxDetails, setIsPaxDetails] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -49,6 +54,18 @@ const HomeBox = () => {
   const [travelData, setTravelData] = useState([]);
   const [countries, setCountries] = useState([]);
   const [filteredCountries, setFilteredCountries] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+    const [locationData, setLocationData] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedLocation, setSelectedLocation] = useState(null);
+    const [rooms, setRooms] = useState([
+      { adults: 1, children: 0, childAges: [] },
+    ]);
+    const [open, setOpen] = useState(false);
+    const [checkIn, setCheckIn] = useState(dayjs().format("YYYY-MM-DD"));
+    const [checkOut, setCheckOut] = useState(
+      dayjs().add(1, "day").format("YYYY-MM-DD")
+    );
   const [travelDetails, setTravelDetails] = useState({
     a: 1,
     c: 0,
@@ -82,7 +99,7 @@ const HomeBox = () => {
   const handleVisaTypeChange = (value) => {
     setVisaType(value);
   };
-  
+
   const handleDecrement = (type) => {
     setPaxState((prevState) => ({
       ...prevState,
@@ -170,6 +187,39 @@ const HomeBox = () => {
     }
   };
 
+  const getAutoSuggestLocation = async (term = "") => {
+    try {
+      const response = await axios.get(
+        `https://autosuggest.travel.zentrumhub.com/api/locations/locationcontent/autosuggest?term=${term}`
+      );
+
+      if (response.status === 200) {
+        const suggestions = response?.data?.locationSuggestions || [];
+        setLocationData(suggestions);
+      } else {
+        console.log("Failed to fetch locations:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+    }
+  };
+  const toggleDropdown = async () => {
+    setIsOpen(!isOpen);
+    if (!isOpen) {
+      await getAutoSuggestLocation();
+    }
+  };
+  const selectLocation = (location) => {
+    setSelectedLocation(location);
+    setIsOpen(false);
+    setIsHotelSearchOpen(false)
+  };
+  const handleSearch = (event) => {
+    const term = event.target.value;
+    setSearchTerm(term);
+    getAutoSuggestLocation(term);
+  };
+
   const handleSearchChange = (event) => {
     const query = event.target.value;
     if (query) {
@@ -223,6 +273,16 @@ const HomeBox = () => {
   const closeCitySearch = () => {
     setIsCitySearchOpen(false);
   };
+
+  const openHotelSearch = () => {
+    setIsHotelSearchOpen(true);
+    toggleDropdown()
+  };
+
+  const closeHotelSearch = () => {
+    setIsHotelSearchOpen(false);
+  };
+
   const openCitySearchVisa = () => {
     setIsCitySearchOpenVisa(true);
   };
@@ -237,6 +297,7 @@ const HomeBox = () => {
   const closeModalPax = () => {
     setIsPaxDetails(false);
   };
+
   const handleRedirect = () => {
     const formattedTravelData = Array.isArray(travelData)
       ? travelData.map((data) => ({
@@ -288,23 +349,26 @@ const HomeBox = () => {
   ];
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2 py-5 px-2">
-      {navItems.map((item) => (
-        <button
-          key={item.title}
-          className="bg-white shadow-lg rounded-lg p-3 flex flex-col items-center justify-center gap-2 w-20 h-20 sm:w-24 sm:h-24"
-          onClick={() => openModal(item.modalName)}
-        >
-          <Image
-            src={item.image}
-            alt={item.title}
-            width={16} height={16}
-            className="w-10 h-10 sm:w-12 sm:h-12"
-          />
-          <span className="text-sm">{item.title}</span>
-        </button>
-      ))}
-
+    <div className="flex flex-wrap items-center justify-start gap-2 py-5 px-2">
+      <div className="flex items-center justify-start gap-2 py-5 px-2 overflow-x-auto">
+        {navItems.map((item) => (
+          <button
+            key={item.title}
+            className="bg-white shadow-lg rounded-lg p-3 flex flex-col items-center justify-center gap-2 min-w-20 min-h-20 w-20 h-20"
+            onClick={() => openModal(item.modalName)}
+          >
+            <Image
+              src={item.image}
+              alt={item.title}
+              width={30} // Fixed width (adjust size as necessary)
+              height={30} // Fixed height (adjust size as necessary)
+              className="object-contain"
+            />
+            <span className="text-xs sm:text-sm text-center">{item.title}</span>{" "}
+            {/* Text with fixed size */}
+          </button>
+        ))}
+      </div>
       {isModalOpen && (
         <div
           className="fixed inset-0 flex items-center justify-center z-50 bg-black/50"
@@ -320,7 +384,8 @@ const HomeBox = () => {
                   <button onClick={closeModal}>
                     <Image
                       src="/icons/arrow.png"
-                      width={16} height={16} 
+                      width={16}
+                      height={16}
                       alt="Home Box"
                       className="w-4 h-4 md:h-6 md:w-6"
                     />
@@ -345,10 +410,7 @@ const HomeBox = () => {
                 </div>
                 <div className="p-3">
                   {["from", "to"].map((type) => (
-                    <div
-                      key={type}
-                      className="bg-gray-500/10 rounded-lg p-2 mb-2"
-                    >
+                    <div key={type} className="bg-gray/10 rounded-lg p-2 mb-2">
                       <p className="text-gray-500">
                         {type.charAt(0).toUpperCase() + type.slice(1)}
                       </p>
@@ -362,7 +424,7 @@ const HomeBox = () => {
                       </p>
                     </div>
                   ))}
-                  <div className="bg-gray-500/10 rounded-lg p-2 mb-2">
+                  <div className="bg-gray/10 rounded-lg p-2 mb-2">
                     <p className="text-gray-500">Departure Date</p>
                     <div className="relative">
                       <DatePicker
@@ -383,7 +445,7 @@ const HomeBox = () => {
                   </div>
 
                   {activeFilter === "roundTrip" && (
-                    <div className="bg-gray-500/10 rounded-lg p-2 mb-2">
+                    <div className="bg-gray/10 rounded-lg p-2 mb-2">
                       <p className="text-gray-500">Return</p>
                       <p className="font-medium truncate max-w-xs sm:max-w-sm md:max-w-md">
                         January 18, 2025
@@ -391,7 +453,7 @@ const HomeBox = () => {
                     </div>
                   )}
                   <div
-                    className="bg-gray-500/10 rounded-lg p-2 mb-2"
+                    className="bg-gray/10 rounded-lg p-2 mb-2"
                     onClick={() => openPaxDetails()}
                   >
                     <p className="text-gray-500">Travellers || Class</p>
@@ -411,13 +473,87 @@ const HomeBox = () => {
                 </div>
               </div>
             )}
+            {currentModal === "hotel" && (
+              <div>
+                <div className="bg-yellow p-3 flex items-center gap-3">
+                  <button onClick={closeModal}>
+                    <Image
+                      src="/icons/arrow.png"
+                      width={16}
+                      height={16}
+                      alt="Home Box"
+                      className="w-4 h-4 md:h-6 md:w-6"
+                    />
+                  </button>
+                  <p className="text-white font-medium">Hotel Search</p>
+                </div>
+                <div className="p-2">
+                  <div className="bg-gray/50 rounded-lg p-2 mb-2">
+                    <p className="text-gray-500">Hotel</p>
+                    <p
+                      className="font-medium truncate max-w-xs sm:max-w-sm md:max-w-md cursor-pointer"
+                      onClick={() => openHotelSearch()}
+                    >
+                      {selectedLocation?.name || "Select a city"}
+                    </p>
+                  </div>
+                  <div className="bg-gray/50 rounded-lg p-2 mb-2">
+  <p className="text-gray-500">Check In</p>
+  <p
+    className="font-medium truncate max-w-xs sm:max-w-sm md:max-w-md cursor-pointer"
+    onClick={() => openHotelSearch(type)}
+  >
+    <RangePicker
+      format="DD MMM YYYY" // Correct dayjs format
+      defaultValue={[dayjs(), dayjs().add(1, "day")]}
+      onChange={(dates) => {
+        if (dates) {
+          setCheckIn(dates[0].format("YYYY-MM-DD"));
+          setCheckOut(dates[1].format("YYYY-MM-DD"));
+        }
+      }}
+      className="w-full border-none rounded-lg text-2xl font-semibold custom-range-picker mt-2"
+    />
+  </p>
+</div>
+                  <div className="bg-gray/50 rounded-lg p-2 mb-2">
+                    <p className="text-gray-500">Checkout</p>
+                    <p
+                      className="font-medium truncate max-w-xs sm:max-w-sm md:max-w-md cursor-pointer"
+                      onClick={() => openCitySearch(type)}
+                    >
+                      February 19, 2025
+                    </p>
+                  </div>
+                  <div className="bg-gray/50 rounded-lg p-2 mb-2">
+                    <p className="text-gray-500">Checkout</p>
+                    <p
+                      className="font-medium truncate max-w-xs sm:max-w-sm md:max-w-md cursor-pointer"
+                      onClick={() => openCitySearch(type)}
+                    >
+                      Ahmedabad
+                    </p>
+                  </div>
+                  <button
+                    className="w-full bg-yellow text-white font-medium py-3 rounded-lg"
+                    onClick={() => {
+                      handleRedirect();
+                    }}
+                  >
+                    Search
+                  </button>
+                </div>
+              </div>
+            )}
+
             {currentModal === "visa" && (
               <div>
                 <div className="bg-yellow p-3 flex items-center gap-3">
                   <button onClick={closeModal}>
                     <Image
                       src="/icons/arrow.png"
-                      width={16} height={16}
+                      width={16}
+                      height={16}
                       alt="Home Box"
                       className="w-4 h-4 md:h-6 md:w-6"
                     />
@@ -461,40 +597,42 @@ const HomeBox = () => {
 
                   <div className="bg-gray-500/10 rounded-lg p-2 mb-2">
                     <p className="text-gray-500">Visa Type</p>
-                   <Select value={visaType} onValueChange={handleVisaTypeChange}>
-                               <SelectTrigger className="font-medium truncate max-w-xs text-lg sm:max-w-sm md:max-w-md cursor-pointer">
-                                 <SelectValue placeholder="Select a visa type" />
-                               </SelectTrigger>
-                               <SelectContent>
-                                 {VISA_TYPE.map((visa) => (
-                                   <SelectItem key={visa.label} value={visa.label}>
-                                     {visa.label}
-                                   </SelectItem>
-                                 ))}
-                               </SelectContent>
-                             </Select>
+                    <Select
+                      value={visaType}
+                      onValueChange={handleVisaTypeChange}
+                    >
+                      <SelectTrigger className="font-medium truncate max-w-xs text-lg sm:max-w-sm md:max-w-md cursor-pointer">
+                        <SelectValue placeholder="Select a visa type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VISA_TYPE.map((visa) => (
+                          <SelectItem key={visa.label} value={visa.label}>
+                            {visa.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="bg-gray-500/10 rounded-lg p-2 mb-2">
                     <p className="text-gray-500">Length Of Stay</p>
-                  
-                      <Select
-                        value={stayingDays}
-                        onValueChange={handleStayingDaysChange}
-                      >
-                        <SelectTrigger className="font-medium truncate max-w-xs text-lg sm:max-w-sm md:max-w-md cursor-pointer">
-                          <SelectValue placeholder="Select staying days" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 20 }, (_, i) => i + 1).map(
-                            (day) => (
-                              <SelectItem key={day} value={day}>
-                                {day} days
-                              </SelectItem>
-                            )
-                          )}
-                        </SelectContent>
-                      </Select>
-               
+
+                    <Select
+                      value={stayingDays}
+                      onValueChange={handleStayingDaysChange}
+                    >
+                      <SelectTrigger className="font-medium truncate max-w-xs text-lg sm:max-w-sm md:max-w-md cursor-pointer">
+                        <SelectValue placeholder="Select staying days" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 20 }, (_, i) => i + 1).map(
+                          (day) => (
+                            <SelectItem key={day} value={day}>
+                              {day} days
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div
                     className="bg-gray-500/10 rounded-lg p-2 mb-2"
@@ -533,7 +671,8 @@ const HomeBox = () => {
                     >
                       <Image
                         src="/icons/arrow.png"
-                        width={16} height={16}
+                        width={16}
+                        height={16}
                         className="w-4 h-4 md:h-6 md:w-6 filter grayscale invert"
                         alt="Arrow icon"
                       />
@@ -558,10 +697,74 @@ const HomeBox = () => {
                         alt="Home Box"
                         onClick={() => handleCitySelect(city, cityType)}
                       >
-                        <Image src="/icons/departures.png" className="w-6 h-6"width={16} height={16} alt="Home Box"/>
+                        <Image
+                          src="/icons/departures.png"
+                          className="w-6 h-6"
+                          width={16}
+                          height={16}
+                          alt="Home Box"
+                        />
                         <span>
                           <p className="text-sm">{`${city.iata_code} - ${city.municipality}`}</p>
                           <p className=" truncate max-w-xs sm:max-w-sm md:max-w-md cursor-pointer">{`${city.name} Intl Arpt`}</p>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {isHotelSearchOpen && (
+              <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
+                <div
+                  className="bg-white p-2 w-full h-full"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center gap-3 bg-blue/10 border border-blue rounded-lg p-2 mt-2">
+                    <button
+                      onClick={closeHotelSearch}
+                      className="focus:outline-none"
+                    >
+                      <Image
+                        src="/icons/arrow.png"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4 md:h-6 md:w-6 filter grayscale invert"
+                        alt="Arrow icon"
+                      />
+                    </button>
+                    <div className="flex flex-col">
+                      <p className="text-black font-semibold">
+                        Destination
+                      </p>
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={handleSearch}
+                        placeholder="Search location..."
+                        className="bg-transparent text-black -mt-1 focus:outline-none focus:ring-0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-2 flex flex-col gap-2 mt-5">
+                  {locationData.map((location) => (
+                      <div
+                      key={location.id}
+                                              className="flex items-center gap-3 cursor-pointer"
+                        alt="Home Box"
+                        onClick={() => selectLocation(location)}
+                      >
+                        <Image
+                          src="/icons/location.png"
+                          className="w-4 h-4"
+                          width={14}
+                          height={14}
+                          alt="Home Box"
+                        />
+                        <span>
+                          <p className="text-sm">{location.fullName}</p>
+                          
                         </span>
                       </div>
                     ))}
@@ -582,7 +785,8 @@ const HomeBox = () => {
                     >
                       <Image
                         src="/icons/arrow.png"
-                        width={16} height={16}
+                        width={16}
+                        height={16}
                         className="w-4 h-4 md:h-6 md:w-6 filter grayscale invert"
                         alt="Arrow icon"
                       />
@@ -607,7 +811,8 @@ const HomeBox = () => {
                         <span className="flex items-center gap-3">
                           <Image
                             src="icons/location.png"
-                            width={16} height={16}
+                            width={16}
+                            height={16}
                             className="w-6 h-6"
                             alt="Location icon"
                           />
@@ -634,7 +839,8 @@ const HomeBox = () => {
                     <button onClick={closeModalPax}>
                       <Image
                         src="/icons/arrow.png"
-                        width={16} height={16}
+                        width={16}
+                        height={16}
                         className="w-4 h-4 md:h-6 md:w-6"
                         alt="Back"
                       />

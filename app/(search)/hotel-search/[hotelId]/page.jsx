@@ -15,20 +15,11 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
-const datePrice = [
-  { id: "Sun, 25 Aug", price: "$125" },
-  { id: "Mon, 26 Aug", price: "$150" },
-  { id: "Tue, 27 Aug", price: "$175" },
-  { id: "Wed, 28 Aug", price: "$200" },
-  { id: "Thu, 29 Aug", price: "$225" },
-  { id: "Fri, 30 Aug", price: "$250" },
-  { id: "Sat, 31 Aug", price: "$300" },
-];
-
 export default function Page() {
   const params = useParams();
   const token = params.hotelId;
   const searchParams = useSearchParams();
+
   const [viewPriceSection, setViewPriceSection] = useState(false);
   const [isModalOpenFilter, setModalOpenFilter] = useState(false);
   const [hotelList, setHotelList] = useState([]);
@@ -42,6 +33,7 @@ export default function Page() {
     rooms: "",
   });
 
+  // Load selected location from localStorage
   useEffect(() => {
     const savedLocation = localStorage.getItem("selectedLocation");
     if (savedLocation) {
@@ -53,33 +45,29 @@ export default function Page() {
     }
   }, []);
 
+  // Fetch hotels when a location is selected
   useEffect(() => {
     if (selectedLocation) {
       getHotelList();
     }
   }, [selectedLocation]);
 
+  // Fetch hotel list
   const getHotelList = async () => {
-    if (!selectedLocation) {
-      console.error("Location data is missing.");
-      return;
-    }
-
     setLoading(true);
     try {
-      // Step 1: Fetch hotel content (name, image, rating)
-      const contentList = await getHotelContent(
-        selectedLocation.coordinates.lat,
-        selectedLocation.coordinates.long,
-        "client-demo-channel"
-      );
-
-      // Step 2: Fetch hotel availability (rate, availability)
       const availabilityList = await getHotelAvailability(token);
+      if (!availabilityList.length) {
+        console.error("No available hotels found.");
+        setLoading(false);
+        return;
+      }
 
-      // Step 3: Merge availability data with content data
+      const availableHotelIds = availabilityList.map((hotel) => hotel.id);
+      const contentList = await getHotelContent(availableHotelIds, "client-demo-channel");
+
       const mergedHotels = contentList.map((hotelContent) => {
-        const availability = availabilityList.find((availability) => availability.id === hotelContent.id);
+        const availability = availabilityList.find((hotel) => hotel.id === hotelContent.id);
 
         return {
           id: hotelContent.id,
@@ -89,7 +77,8 @@ export default function Page() {
           rating: hotelContent.starRating || "N/A",
           distance: hotelContent.distance || "N/A",
           availability: availability?.availableRooms || "Unknown",
-          rate: availability?.rate || null, // Initially null, to be updated with rates
+          rate: availability?.rate || null,
+          rateLoading: true, // Track rate loading for each hotel
         };
       });
 
@@ -101,6 +90,7 @@ export default function Page() {
     }
   };
 
+  // Fetch hotel availability
   const getHotelAvailability = async (token) => {
     try {
       const response = await axios.get(
@@ -108,10 +98,10 @@ export default function Page() {
         {
           headers: {
             "Content-Type": "application/json; charset=utf-8",
-            accountId: "zentrum-demo-account",
+            accountId: "tripbng-live-account",
             "customer-ip": "54.86.50.139",
             correlationId: "5e860c0f-a6a6-1d48-c74e-71f580463d73",
-            apiKey: "demo123",
+            apiKey: "bc46745f-8af7-473a-aeba-c6ce4efa18e5",
           },
         }
       );
@@ -128,29 +118,16 @@ export default function Page() {
     }
   };
 
-  const getHotelContent = async (circularLat, circularLong, channelId) => {
+  // Fetch hotel content
+  const getHotelContent = async (hotelIds, channelId) => {
     try {
       const response = await axios.post(
         "https://nexus.prod.zentrumhub.com/api/content/hotelcontent/getHotelContent",
         {
-          channelId: "client-demo-channel",
-          circularRegion: {
-            centerLat: circularLat,
-            centerLong: circularLong,
-            radiusInKm: 30,
-          },
+          channelId,
+          hotelIds,
           culture: "en-US",
           contentFields: ["Basic"],
-          distanceFrom: {
-            lat: circularLat,
-            long: circularLong,
-          },
-          filterBy: {
-            ratings: {
-              min: 4,
-              max: 5,
-            },
-          },
         },
         {
           headers: {
@@ -158,7 +135,7 @@ export default function Page() {
             "customer-ip": "54.86.50.139",
             correlationId: "58497bbd-8c3c-72e3-c981-46825d71b261",
             accountId: "zentrum-demo-account",
-            apiKey: "demo123",
+            apiKey: "bc46745f-8af7-473a-aeba-c6ce4efa18e5",
           },
         }
       );
@@ -174,8 +151,14 @@ export default function Page() {
     }
   };
 
-    
-
+  // Handle rate load completion
+  const handleRateLoadComplete = (hotelId) => {
+    setHotelList((prevHotels) =>
+      prevHotels.map((hotel) =>
+        hotel.id === hotelId ? { ...hotel, rateLoading: false } : hotel
+      )
+    );
+  };
 
   return (
     <div className="md:container   flex flex-col gap-4">

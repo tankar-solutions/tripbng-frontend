@@ -22,12 +22,12 @@ const { RangePicker } = DatePicker;
 
 export default function Hotel() {
   const router = useRouter();
-  const [checkInDate, setCheckInDate] = useState(dates[0]?.day);
-  const [checkOutDate, setCheckOutDate] = useState(dates[1]?.day);
-  const [roomAndGuests, setRoomAndGuests] = useState(ROOMS_GUEST[0]?.name);
-  const [priceRange, setPriceRange] = useState(PRICE_RANGE[0]?.name);
+  // const [checkInDate, setCheckInDate] = useState(dates[0]?.day);
+  // const [checkOutDate, setCheckOutDate] = useState(dates[1]?.day);
+  // const [roomAndGuests, setRoomAndGuests] = useState(ROOMS_GUEST[0]?.name);
+  // const [priceRange, setPriceRange] = useState(PRICE_RANGE[0]?.name);
+  // const [selectedCity, setSelectedCity] = useState("Select a city");
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedCity, setSelectedCity] = useState("Select a city");
   const [locationData, setLocationData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLocation, setSelectedLocation] = useState(null);
