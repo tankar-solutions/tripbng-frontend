@@ -195,7 +195,7 @@ export default function Navbar() {
             </div>
           ) : (
             <Link href="/login">
-              <button className="rounded-md bg-blue-500 text-white p-2">
+              <button className="rounded-md bg-yellow text-white p-2">
                 Login or Signup
               </button>
             </Link>
@@ -234,7 +234,7 @@ export default function Navbar() {
             ) : (
               <Link href="/login">
                 <button
-                  className="w-full rounded-md bg-blue-500 text-white p-2"
+                  className="w-full rounded-md bg-yellow text-white p-2"
                   onClick={toggleDrawer}
                 >
                   Login or Signup

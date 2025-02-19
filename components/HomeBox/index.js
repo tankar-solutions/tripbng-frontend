@@ -1,7 +1,6 @@
 "use client";
 import { apiService } from "@/lib/api";
 import React, { useEffect, useState } from "react";
-import DatePicker from "react-datepicker";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
@@ -16,8 +15,7 @@ import { VISA_TYPE } from "@/constants/data/visa-data";
 import Image from "next/image";
 import dayjs from "dayjs";
 import axios from "axios";
-
-import { RangePicker } from 'antd';
+import { DatePicker, Space } from "antd";
 const HomeBox = () => {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,23 +53,44 @@ const HomeBox = () => {
   const [countries, setCountries] = useState([]);
   const [filteredCountries, setFilteredCountries] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
-    const [locationData, setLocationData] = useState([]);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedLocation, setSelectedLocation] = useState(null);
-    const [rooms, setRooms] = useState([
-      { adults: 1, children: 0, childAges: [] },
-    ]);
-    const [open, setOpen] = useState(false);
-    const [checkIn, setCheckIn] = useState(dayjs().format("YYYY-MM-DD"));
-    const [checkOut, setCheckOut] = useState(
-      dayjs().add(1, "day").format("YYYY-MM-DD")
-    );
+  const [locationData, setLocationData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [rooms, setRooms] = useState([
+    { adults: 1, children: 0, childAges: [] },
+  ]);
+  const [open, setOpen] = useState(false);
+  const [checkIn, setCheckIn] = useState(dayjs().format("YYYY-MM-DD"));
+  const [checkOut, setCheckOut] = useState(
+    dayjs().add(1, "day").format("YYYY-MM-DD")
+  );
   const [travelDetails, setTravelDetails] = useState({
     a: 1,
     c: 0,
     i: 0,
     tp: 0,
   });
+  const handleCheckInChange = (date, dateString) => {
+    setCheckIn(dateString);
+    // Ensure checkout is after checkin, and at least one day later
+    let newCheckOut = dayjs(dateString).add(1, 'day');
+    if (dayjs(checkOut).isBefore(newCheckOut)) {
+      setCheckOut(newCheckOut.format("YYYY-MM-DD"));
+    } else if (dayjs(checkOut).isSame(dateString)) {
+      setCheckOut(newCheckOut.format("YYYY-MM-DD"));
+    }
+  };
+
+  const handleCheckOutChange = (date, dateString) => {
+    setCheckOut(dateString);
+  };
+
+  const disabledCheckoutDates = (current) => {
+    if (!checkIn) {
+      return current.isBefore(dayjs().startOf('day')); // Disable all past dates if checkIn is not set
+    }
+    return current.isBefore(dayjs(checkIn).add(1, 'day')); // Disable dates before checkIn + 1 day
+  };
   const defaultCities = {
     from: {
       iata_code: "AMD",
@@ -212,7 +231,7 @@ const HomeBox = () => {
   const selectLocation = (location) => {
     setSelectedLocation(location);
     setIsOpen(false);
-    setIsHotelSearchOpen(false)
+    setIsHotelSearchOpen(false);
   };
   const handleSearch = (event) => {
     const term = event.target.value;
@@ -276,7 +295,7 @@ const HomeBox = () => {
 
   const openHotelSearch = () => {
     setIsHotelSearchOpen(true);
-    toggleDropdown()
+    toggleDropdown();
   };
 
   const closeHotelSearch = () => {
@@ -498,33 +517,31 @@ const HomeBox = () => {
                     </p>
                   </div>
                   <div className="bg-gray/50 rounded-lg p-2 mb-2">
-  <p className="text-gray-500">Check In</p>
-  <p
-    className="font-medium truncate max-w-xs sm:max-w-sm md:max-w-md cursor-pointer"
-    onClick={() => openHotelSearch(type)}
-  >
-    <RangePicker
-      format="DD MMM YYYY" // Correct dayjs format
-      defaultValue={[dayjs(), dayjs().add(1, "day")]}
-      onChange={(dates) => {
-        if (dates) {
-          setCheckIn(dates[0].format("YYYY-MM-DD"));
-          setCheckOut(dates[1].format("YYYY-MM-DD"));
-        }
-      }}
-      className="w-full border-none rounded-lg text-2xl font-semibold custom-range-picker mt-2"
-    />
-  </p>
-</div>
-                  <div className="bg-gray/50 rounded-lg p-2 mb-2">
-                    <p className="text-gray-500">Checkout</p>
-                    <p
-                      className="font-medium truncate max-w-xs sm:max-w-sm md:max-w-md cursor-pointer"
-                      onClick={() => openCitySearch(type)}
-                    >
-                      February 19, 2025
-                    </p>
-                  </div>
+        <p className="text-gray-500">Check In</p>
+        <Space direction="vertical">
+          <DatePicker
+            format="YYYY-MM-DD"
+            defaultValue={dayjs()}
+            onChange={handleCheckInChange}
+            value={dayjs(checkIn)}
+            style={{ width: "100%" }}
+            disabledDate={(current) => current.isBefore(dayjs().startOf('day'))} // Disable past dates
+          />
+        </Space>
+      </div>
+
+      <div className="bg-gray/50 rounded-lg p-2 mb-2">
+        <p className="text-gray-500">Checkout</p>
+        <Space direction="vertical">
+          <DatePicker
+            format="YYYY-MM-DD"
+            value={dayjs(checkOut)}
+            onChange={handleCheckOutChange}
+            disabledDate={disabledCheckoutDates}
+            style={{ width: "100%" }}
+          />
+        </Space>
+      </div>
                   <div className="bg-gray/50 rounded-lg p-2 mb-2">
                     <p className="text-gray-500">Checkout</p>
                     <p
@@ -734,9 +751,7 @@ const HomeBox = () => {
                       />
                     </button>
                     <div className="flex flex-col">
-                      <p className="text-black font-semibold">
-                        Destination
-                      </p>
+                      <p className="text-black font-semibold">Destination</p>
                       <input
                         type="text"
                         value={searchTerm}
@@ -748,10 +763,10 @@ const HomeBox = () => {
                   </div>
 
                   <div className="p-2 flex flex-col gap-2 mt-5">
-                  {locationData.map((location) => (
+                    {locationData.map((location) => (
                       <div
-                      key={location.id}
-                                              className="flex items-center gap-3 cursor-pointer"
+                        key={location.id}
+                        className="flex items-center gap-3 cursor-pointer"
                         alt="Home Box"
                         onClick={() => selectLocation(location)}
                       >
@@ -764,7 +779,6 @@ const HomeBox = () => {
                         />
                         <span>
                           <p className="text-sm">{location.fullName}</p>
-                          
                         </span>
                       </div>
                     ))}
