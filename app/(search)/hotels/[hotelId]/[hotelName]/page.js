@@ -3,33 +3,34 @@
 import axios from "axios";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import { FaTimes } from "react-icons/fa";
 import Image from "next/image";
 import Button from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { ChevronRight } from "lucide-react";
 
 export default function Page() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Extract hotel ID from URL path (assuming /hotels/{hotelId}/{hotelName})
+  // Extract hotel ID from URL path
   const pathSegments = pathname.split("/");
-  const hotelId = pathSegments[2];
+  const hotelId = pathSegments[2]; // Assuming /hotels/{hotelId}/{hotelName}
 
   // Extract search token from query parameters
   const searchToken = searchParams.get("searchid");
 
   // State variables
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [rooms, setRooms] = useState([]);
   const [hotelDetails, setHotelDetails] = useState(null);
   const [isModalOpenImg, setIsModalOpenImg] = useState(false);
-  // hotelData will hold the complete API response including recommendations, rates, rooms, etc.
-  const [hotelData, setHotelData] = useState(null);
+  console.log(rooms);
 
-  // Get all images with Standard size (if available)
+  // Get all images with Standard size
   const standardImages = hotelDetails?.images
     ?.map((img) => img.links.find((link) => link.size === "Standard"))
     ?.filter(Boolean);
@@ -38,7 +39,7 @@ export default function Page() {
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
-  // Fetch hotel data on mount
+  // Fetch room prices and hotel content
   useEffect(() => {
     if (hotelId && searchToken) {
       getRoomsAndRates(hotelId, searchToken);
@@ -65,8 +66,7 @@ export default function Page() {
 
       if (response.status === 200) {
         console.log("Rooms Data:", response.data);
-        // Store the full API response which includes recommendations, rates, rooms, etc.
-        setHotelData(response.data);
+        setRooms(response.data.hotel || []);
       } else {
         console.error("Failed to fetch rooms:", response.status);
       }
@@ -108,40 +108,70 @@ export default function Page() {
     }
   };
 
-  // Function to map recommendations to their corresponding rate(s) and room(s)
-  const mapRecommendationsToDisplayData = () => {
-    if (!hotelData || !hotelData.recommendations) return [];
-    const { recommendations, rates, standardizedRooms, rooms } = hotelData;
-
+  // 1. Mapping recommendations into grouped rooms per recommendation
+  const mapGroupedRecommendations = () => {
+    if (!rooms || !rooms.recommendations) return [];
+    const {
+      recommendations,
+      rates,
+      standardizedRooms,
+      rooms: roomList,
+    } = rooms;
     return recommendations.map((rec) => {
-      // Each recommendation object contains an array of rate IDs.
-      // For each rate ID, we look up the corresponding rate object.
-      const recRates = rec.rates.map((rateId) => {
-        const rate = rates.find((r) => r.id === rateId);
-        if (rate && rate.occupancies && rate.occupancies.length > 0) {
+      const rateObjs = rec.rates
+        .map((rateId) => {
+          const rate = rates.find((r) => r.id === rateId);
           let room = null;
-          // If standardizedRooms is provided, use stdRoomId from the occupancy
-          if (standardizedRooms) {
-            const stdRoomId = rate.occupancies[0].stdRoomId;
-            room = standardizedRooms.find((r) => r.id === stdRoomId);
-          } else {
-            // If room mapping service is not opted, use roomId from the occupancy
-            const roomId = rate.occupancies[0].roomId;
-            room = rooms.find((r) => r.id === roomId);
+          if (rate && rate.occupancies && rate.occupancies.length > 0) {
+            if (standardizedRooms) {
+              const stdRoomId = rate.occupancies[0].stdRoomId;
+              room = standardizedRooms.find((r) => r.id === stdRoomId);
+            } else {
+              const roomId = rate.occupancies[0].roomId;
+              room = roomList.find((r) => r.id === roomId);
+            }
           }
-          return { rate, room };
+          return rate && room ? { rate, room } : null;
+        })
+        .filter(Boolean);
+      // Group rates by room.id for this recommendation
+      const grouped = {};
+      rateObjs.forEach(({ rate, room }) => {
+        if (room) {
+          if (!grouped[room.id]) {
+            grouped[room.id] = { room, rates: [] };
+          }
+          grouped[room.id].rates.push(rate);
         }
-        return null;
-      }).filter(Boolean); // Remove any null entries
-
-      return { recommendation: rec, rates: recRates };
+      });
+      return { recommendation: rec, groupedRooms: Object.values(grouped) };
     });
   };
 
-  // Prepare mapped recommendations data for rendering
-  const mappedData = mapRecommendationsToDisplayData();
+  const groupedData = mapGroupedRecommendations();
 
-  // Slider settings (if needed)
+  // 2. Merge grouped rooms from all recommendations by room ID
+  const mergeGroupedRoomsAcrossRecs = () => {
+    const mergedRooms = {};
+    groupedData.forEach((item) => {
+      item.groupedRooms.forEach((group) => {
+        const roomId = group.room.id;
+        if (!mergedRooms[roomId]) {
+          mergedRooms[roomId] = {
+            room: group.room,
+            rates: [...group.rates],
+            recommendations: [item.recommendation.id], // track which recommendations produced this room
+          };
+        } else {
+          mergedRooms[roomId].rates.push(...group.rates);
+          mergedRooms[roomId].recommendations.push(item.recommendation.id);
+        }
+      });
+    });
+    return Object.values(mergedRooms);
+  };
+
+  const mergedRoomList = mergeGroupedRoomsAcrossRecs();
   const sliderSettings = {
     dots: true,
     infinite: true,
@@ -149,13 +179,16 @@ export default function Page() {
     slidesToShow: 1,
     slidesToScroll: 1,
     arrows: true,
-    adaptiveHeight: true,
+    adaptiveHeight: true, // Ensures the height adjusts dynamically
     appendDots: (dots) => (
       <div style={{ marginTop: "-5px" }}>
-        <ul style={{ margin: "-20px", padding: "0px" }}>{dots}</ul>
+        {" "}
+        {/* Reduce space between image and dots */}
+        <ul style={{ margin: "-10px", padding: "0px" }}>{dots}</ul>
       </div>
     ),
   };
+
   return (
     <div className="md:container py-10 px-3 md:px-3 flex flex-col gap-4">
       {" "}
@@ -560,45 +593,138 @@ export default function Page() {
               . Big Savings! Get INR 2979 Off
             </p>
           </section>
+          <div className="space-y-6">
+            {rooms ? (
+              <div>
+                {mergedRoomList.length > 0 ? (
+                  mergedRoomList.map((group) => (
+                    <div
+                      key={group.room.id}
+                      className="border-t py-6 flex flex-wrap lg:flex-nowrap items-start"
+                    >
+                      {/* Left Column: Room Image Slider */}
+                      <div className="w-full lg:w-[25%] border-r">
+                        <div className="p-4">
+                          {group.room.images && group.room.images.length > 0 ? (
+                            <Slider {...sliderSettings}>
+                              {group.room.images.map((image, index) =>
+                                image.links.map((link, linkIdx) =>
+                                  link.size === "Standard" ? (
+                                    <div
+                                      key={`${index}-${linkIdx}`}
+                                      className="p-1"
+                                    >
+                                      <Image
+                                        src={link.url}
+                                        alt={`Room Image ${index + 1}`}
+                                        width={400}
+                                        height={400}
+                                        className="rounded-lg object-cover"
+                                      />
+                                    </div>
+                                  ) : null
+                                )
+                              )}
+                            </Slider>
+                          ) : (
+                            <div className="p-2">
+                              <Image
+                                src="/placeholder.jpg"
+                                alt="No image available"
+                                width={200}
+                                height={150}
+                                className="rounded-lg"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
-          <div className="space-y-4">
-          {hotelData ? (
-        <div>
-          {hotelDetails && <h2>{hotelDetails.name}</h2>}
-          {mappedData.length > 0 ? (
-            mappedData.map((item) => (
-              <div key={item.recommendation.recommendationId} style={{ marginBottom: "20px", borderBottom: "1px solid #eee" }}>
-                <h3>Recommendation: {item.recommendation.recommendationId}</h3>
-                {item.rates.map((rateItem, idx) => (
-                  <div key={idx} style={{ padding: "10px", border: "1px solid #ccc", margin: "10px 0" }}>
-                    <p>
-                      <strong>Rate ID:</strong> {rateItem.rate.id}
-                    </p>
-                    <p>
-                      <strong>Price:</strong> {rateItem.rate.price}
-                    </p>
-                    {rateItem.room && (
-                      <>
-                        <p>
-                          <strong>Room Name:</strong> {rateItem.room.name}
+                      {/* Center Column: Room Details */}
+                      <div className="w-full lg:w-1/3 p-4">
+                        <h3 className="text-2xl font-bold text-gray-800">
+                          {group.room.name}
+                        </h3>
+                        <p className="text-gray-600 mt-1">
+                          {group.room.facilities?.length > 0 && (
+                            <div className="mt-4">
+                              <h4 className="text-md font-semibold text-gray-700">
+                                Facilities:
+                              </h4>
+                              <ul className="list-disc list-inside space-y-1">
+                                {group.room.facilities
+                                  .slice(0, 5)
+                                  .map((facility, index) => (
+                                    <li
+                                      key={index}
+                                      className="text-sm text-gray-600"
+                                    >
+                                      {facility.name}
+                                    </li>
+                                  ))}
+                              </ul>
+                            </div>
+                          )}
                         </p>
-                        <p>
-                          <strong>Room ID:</strong> {rateItem.room.id}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                ))}
+                        {/* You can add more room details here if needed */}
+                      </div>
+
+                      {/* Right Column: Rates List */}
+                      <div className="w-full lg:w-1/2 p-4 flex flex-col justify-center">
+                        <div className="mb-4">
+                          <p className="text-lg font-semibold text-gray-700 pb-2">
+                            Available Rates
+                          </p>
+                        </div>
+                        {group.rates.map((rate, idx) => (
+                          <div
+                            key={idx}
+                            className="w-full mb-4 flex flex-col md:flex-row md:items-center justify-between bg-white shadow-md p-4 rounded-lg"
+                          >
+                            <div className="space-y-1">
+                              <p className="bg-green-500 text-white px-2 py-1 rounded inline-block text-sm">
+                                Package Rate
+                              </p>
+                              <p className="text-sm text-gray-700">
+                                {rate.includes[0]}
+                              </p>
+                              <p className="text-sm text-gray-700">
+                                Non-refundable
+                              </p>
+                              <p className="text-sm text-gray-700">
+                                Flexible policies
+                              </p>
+                            </div>
+                            <div className="text-right mt-2 md:mt-0">
+                              <p className="text-lg font-bold text-gray-800">
+                                {/* <span className="line-through text-sm text-gray-500 mr-2">
+                                  ₹125,557.26
+                                </span> */}
+                                <span>₹{rate.baseRate}</span>
+                              </p>
+                              <p className="text-sm text-gray-600">per night</p>
+                              <p className="text-sm text-gray-600">
+                                Total: ₹{rate.totalRate}
+                              </p>
+                              <button className="mt-2 bg-yellow hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-sm">
+                                Book Now
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-600">
+                    No recommendations available.
+                  </p>
+                )}
               </div>
-            ))
-          ) : (
-            <p>No recommendations available.</p>
-          )}
-        </div>
-      ) : (
-        <p>Loading hotel data...</p>
-      )}
-    </div>
+            ) : (
+              <p className="text-center text-gray-600">Loading hotel data...</p>
+            )}
+          </div>
 
           {isModalOpen && (
             <div
