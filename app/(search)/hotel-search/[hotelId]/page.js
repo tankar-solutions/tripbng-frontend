@@ -69,24 +69,33 @@ export default function Page() {
     }).format(date);
   };
 
-  // Load selected location from localStorage
   useEffect(() => {
-    const savedLocation = localStorage.getItem("selectedLocation");
-    if (savedLocation) {
-      const parsedLocation = JSON.parse(savedLocation);
-      setSelectedLocation(parsedLocation);
-      console.log("Coordinates loaded:", parsedLocation.coordinates);
-    } else {
-      console.error("No location found in localStorage.");
-    }
+    const fetchLocationAndHotels = async () => {
+      let savedLocation = localStorage.getItem("selectedLocation");
+  
+      if (savedLocation) {
+        const parsedLocation = JSON.parse(savedLocation);
+        setSelectedLocation(parsedLocation);
+        console.log("Coordinates loaded:", parsedLocation.coordinates);
+  
+        // Ensure getHotelList is called after setting state
+        setTimeout(() => {
+          getHotelList();
+        }, 500);
+      } else {
+        console.error("No location found in localStorage.");
+      }
+    };
+  
+    fetchLocationAndHotels();
   }, []);
-
-  // Fetch hotels when a location is selected
+  
   useEffect(() => {
     if (selectedLocation) {
       getHotelList();
     }
   }, [selectedLocation]);
+  
 
   // Fetch hotel list
   const getHotelList = async () => {

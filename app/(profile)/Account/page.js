@@ -48,8 +48,24 @@ export default function Account() {
   const [address, setAddress] = useState("");
   const [pincode, setPincode] = useState("");
   const [state, setState] = useState("");
-  console.log("h", userInfo);
+  const [isModalOpenOtp, setIsModalOpenOtp] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
+  const correctOtp = "1234"; // Replace with actual OTP verification logic
 
+  const handleDeleteClick = () => {
+    setIsModalOpenOtp(true);
+  };
+
+  const handleVerifyOtp = () => {
+    if (otp === correctOtp) {
+      alert("Account deleted successfully!");
+      setIsModalOpenOtp(false);
+      // Add API call for account deletion here
+    } else {
+      setError("Invalid OTP. Please try again.");
+    }
+  };
   const handleNameChange = (e) => setName(e.target.value);
 
   const handleAddressChange = (e) => setAddress(e.target.value);
@@ -262,7 +278,13 @@ export default function Account() {
               >
                 H
                 <button className="absolute bottom-2 md:bottom-5 -right-4 border-2 md:border-4 border-white bg-gray-500 rounded-full p-2">
-                  <Image src="/icons/edit.png" width={100} height={100} className="h-3 w-3 md:h-4 md:w-4" alt="profile img" />
+                  <Image
+                    src="/icons/edit.png"
+                    width={100}
+                    height={100}
+                    className="h-3 w-3 md:h-4 md:w-4"
+                    alt="profile img"
+                  />
                 </button>
               </span>
 
@@ -292,7 +314,13 @@ export default function Account() {
                 </span>
               ) : (
                 <span className="flex items-center gap-3">
-                  <Image className="w-4 h-4 md:h-6 md:w-6" src="/icons/plus.png" width={100} height={100} alt="profile img" />
+                  <Image
+                    className="w-4 h-4 md:h-6 md:w-6"
+                    src="/icons/plus.png"
+                    width={100}
+                    height={100}
+                    alt="profile img"
+                  />
                   <button
                     className="font-medium text-sm"
                     onClick={() => openModal()}
@@ -303,7 +331,13 @@ export default function Account() {
               )}
 
               <span className="flex items-center gap-3">
-                <Image className="w-4 h-4 md:h-6 md:w-6" src="/icons/accept.png" width={100} height={100} alt="profile img" />
+                <Image
+                  className="w-4 h-4 md:h-6 md:w-6"
+                  src="/icons/accept.png"
+                  width={100}
+                  height={100}
+                  alt="profile img"
+                />
                 <p className="text-yellow font-semibold text-sm">
                   Verified mobile Number
                 </p>
@@ -326,7 +360,13 @@ export default function Account() {
                 </span>
               ) : (
                 <span className="flex items-center gap-3">
-                  <Image className="w-8 h-8" src="/icons/plus.png" width={100} height={100} alt="profile img" />
+                  <Image
+                    className="w-8 h-8"
+                    src="/icons/plus.png"
+                    width={100}
+                    height={100}
+                    alt="profile img"
+                  />
                   <button
                     className="text-sm font-medium "
                     onClick={() => openModalEdit()}
@@ -529,7 +569,13 @@ export default function Account() {
                   {email ? (
                     <span className="flex items-center justify-start gap-2 md:w-1/2">
                       <p className="font-medium text-start">{email}</p>
-                      <Image src="/icons/accept.png" width={100} height={100} className="w-6 h-6" alt="profile img" />
+                      <Image
+                        src="/icons/accept.png"
+                        width={100}
+                        height={100}
+                        className="w-6 h-6"
+                        alt="profile img"
+                      />
                       <p className="font-medium text-sm text-green-5  00">
                         Verified
                       </p>
@@ -634,19 +680,80 @@ export default function Account() {
             {isOpen && (
               <div className="mx-3 mt-5">
                 <span className="flex gap-3">
-                  <Image src="icons/monitor.png" className="w-10 h-10" alt="profile img" />
+                  <Image
+                    src="icons/monitor.png"
+                    className="w-10 h-10"
+                    alt="profile img"
+                  />
                   <span>
                     <p className="font-semibold ">
                       Chrome <span>(Current device)</span>
                     </p>
                     <p>Desktop Web</p>
                     <p>MANESAR, IN</p>
-                    <p>Logged In since 10:13 am, 30th Dec {'\''}24</p>
+                    <p>Logged In since 10:13 am, 30th Dec {"'"}24</p>
                   </span>
                 </span>
               </div>
             )}
           </div>
+        </div>
+        <div className="mb-5">
+        <div className="bg-white rounded-lg border py-3">
+        <div className="flex items-center justify-between mr-3">
+          <span className="border-l-4 border-red-500">
+            <div className="ml-2">
+              <h1 className="text-xl font-semibold md:text-3xl text-red-600">
+                Delete Account
+              </h1>
+              <p className="text-sm md:text-lg font-medium text-gray-500">
+                Deleting your account will permanently remove all your data.
+              </p>
+            </div>
+          </span>
+        </div>
+        <div className="mx-3 mt-5">
+          <p className="text-sm text-gray-600">
+            This action is irreversible. All your data will be lost, and you won't be able to recover it.
+          </p>
+          <button
+            className="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg mt-4 hover:bg-red-700"
+            onClick={handleDeleteClick}
+          >
+            Delete My Account
+          </button>
+        </div>
+      </div>
+      {isModalOpenOtp && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setIsModalOpenOtp(false)}>
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 className="text-xl font-semibold text-gray-800">Enter OTP</h2>
+            <p className="text-sm text-gray-600 mb-4">Enter the 4-digit OTP sent to your email/phone.</p>
+            <input
+              type="text"
+              maxLength="4"
+              className="w-full border p-2 rounded-lg text-center text-xl"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+            />
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+            <div className="flex justify-between mt-4">
+              <button
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                onClick={handleVerifyOtp}
+              >
+                Verify OTP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
         </div>
       </div>
       {isModalOpen && (
