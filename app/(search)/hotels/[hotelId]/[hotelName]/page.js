@@ -3,34 +3,33 @@
 import axios from "axios";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { FaTimes } from "react-icons/fa";
 import Image from "next/image";
 import Button from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-
+import { ChevronRight } from "lucide-react";
 
 export default function Page() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Extract hotel ID from URL path
+  // Extract hotel ID from URL path (assuming /hotels/{hotelId}/{hotelName})
   const pathSegments = pathname.split("/");
-  const hotelId = pathSegments[2]; // Assuming /hotels/{hotelId}/{hotelName}
+  const hotelId = pathSegments[2];
 
   // Extract search token from query parameters
   const searchToken = searchParams.get("searchid");
 
   // State variables
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [rooms, setRooms] = useState([]);
   const [hotelDetails, setHotelDetails] = useState(null);
   const [isModalOpenImg, setIsModalOpenImg] = useState(false);
+  // hotelData will hold the complete API response including recommendations, rates, rooms, etc.
+  const [hotelData, setHotelData] = useState(null);
 
-  // Get all images with Standard size
+  // Get all images with Standard size (if available)
   const standardImages = hotelDetails?.images
     ?.map((img) => img.links.find((link) => link.size === "Standard"))
     ?.filter(Boolean);
@@ -39,7 +38,7 @@ export default function Page() {
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
-  // Fetch room prices and hotel content
+  // Fetch hotel data on mount
   useEffect(() => {
     if (hotelId && searchToken) {
       getRoomsAndRates(hotelId, searchToken);
@@ -66,7 +65,8 @@ export default function Page() {
 
       if (response.status === 200) {
         console.log("Rooms Data:", response.data);
-        setRooms(response.data.rooms || []);
+        // Store the full API response which includes recommendations, rates, rooms, etc.
+        setHotelData(response.data);
       } else {
         console.error("Failed to fetch rooms:", response.status);
       }
@@ -107,6 +107,41 @@ export default function Page() {
       console.error("Error fetching hotel details:", error);
     }
   };
+
+  // Function to map recommendations to their corresponding rate(s) and room(s)
+  const mapRecommendationsToDisplayData = () => {
+    if (!hotelData || !hotelData.recommendations) return [];
+    const { recommendations, rates, standardizedRooms, rooms } = hotelData;
+
+    return recommendations.map((rec) => {
+      // Each recommendation object contains an array of rate IDs.
+      // For each rate ID, we look up the corresponding rate object.
+      const recRates = rec.rates.map((rateId) => {
+        const rate = rates.find((r) => r.id === rateId);
+        if (rate && rate.occupancies && rate.occupancies.length > 0) {
+          let room = null;
+          // If standardizedRooms is provided, use stdRoomId from the occupancy
+          if (standardizedRooms) {
+            const stdRoomId = rate.occupancies[0].stdRoomId;
+            room = standardizedRooms.find((r) => r.id === stdRoomId);
+          } else {
+            // If room mapping service is not opted, use roomId from the occupancy
+            const roomId = rate.occupancies[0].roomId;
+            room = rooms.find((r) => r.id === roomId);
+          }
+          return { rate, room };
+        }
+        return null;
+      }).filter(Boolean); // Remove any null entries
+
+      return { recommendation: rec, rates: recRates };
+    });
+  };
+
+  // Prepare mapped recommendations data for rendering
+  const mappedData = mapRecommendationsToDisplayData();
+
+  // Slider settings (if needed)
   const sliderSettings = {
     dots: true,
     infinite: true,
@@ -114,14 +149,13 @@ export default function Page() {
     slidesToShow: 1,
     slidesToScroll: 1,
     arrows: true,
-    adaptiveHeight: true,  // Ensures the height adjusts dynamically
+    adaptiveHeight: true,
     appendDots: (dots) => (
-      <div style={{ marginTop: "-5px" }}> {/* Reduce space between image and dots */}
+      <div style={{ marginTop: "-5px" }}>
         <ul style={{ margin: "-20px", padding: "0px" }}>{dots}</ul>
       </div>
     ),
   };
-  
   return (
     <div className="md:container py-10 px-3 md:px-3 flex flex-col gap-4">
       {" "}
@@ -528,71 +562,42 @@ export default function Page() {
           </section>
 
           <div className="space-y-4">
-      {hotelDetails?.rooms?.map((room) => {
-        // Find images matching the roomId in roomCodes
-        const roomImages = hotelDetails?.images?.filter((img) =>
-          img.roomCodes.includes(room.roomId)
-        );
-
-        return (
-          <div key={room.roomId} className="border-t flex flex-wrap lg:flex-nowrap items-start">
-            {/* Room Image Slider */}
-            <div className="w-full lg:w-[25%] border-r">
-              <div className="p-4">
-                {roomImages.length > 0 ? (
-                  <Slider {...sliderSettings}>
-                    {roomImages.map((image, index) =>
-                      image.links.map((link) =>
-                        link.size === "Standard" ? (
-                          <div key={index}>
-                            <Image
-                              src={link.url}
-                              alt={`Room Image ${index}`}
-                              width={400}
-                              height={400}
-                              className="rounded-lg"
-                            />
-                          </div>
-                        ) : null
-                      )
+          {hotelData ? (
+        <div>
+          {hotelDetails && <h2>{hotelDetails.name}</h2>}
+          {mappedData.length > 0 ? (
+            mappedData.map((item) => (
+              <div key={item.recommendation.recommendationId} style={{ marginBottom: "20px", borderBottom: "1px solid #eee" }}>
+                <h3>Recommendation: {item.recommendation.recommendationId}</h3>
+                {item.rates.map((rateItem, idx) => (
+                  <div key={idx} style={{ padding: "10px", border: "1px solid #ccc", margin: "10px 0" }}>
+                    <p>
+                      <strong>Rate ID:</strong> {rateItem.rate.id}
+                    </p>
+                    <p>
+                      <strong>Price:</strong> {rateItem.rate.price}
+                    </p>
+                    {rateItem.room && (
+                      <>
+                        <p>
+                          <strong>Room Name:</strong> {rateItem.room.name}
+                        </p>
+                        <p>
+                          <strong>Room ID:</strong> {rateItem.room.id}
+                        </p>
+                      </>
                     )}
-                  </Slider>
-                ) : (
-                  <Image src="/placeholder.jpg" alt="No image" width={200} height={150} />
-                )}
+                  </div>
+                ))}
               </div>
-            </div>
-
-            {/* Room Details */}
-            <div className="w-full lg:w-[50%] p-4">
-              <h3 className="text-xl font-semibold">{room.type}</h3>
-              <p className="text-gray-600">Max Guests: {room.maxGuestAllowed} (Adults: {room.maxAdultAllowed}, Children: {room.maxChildrenAllowed})</p>
-              <p className="text-gray-600">Room Size: {room.area.squareMeters} m² ({room.area.squareFeet} ft²)</p>
-
-              {/* Bed Information */}
-              <p className="font-medium mt-2">Bed Type:</p>
-              <ul className="list-disc list-inside text-gray-500">
-                {room.beds.map((bed, index) => (
-                  <li key={index}>{bed.Count} {bed.Size} Bed</li>
-                ))}
-              </ul>
-
-              {/* Facilities */}
-              <p className="font-medium mt-2">Facilities:</p>
-              <ul className="list-disc list-inside text-gray-500">
-                {room.facilities.slice(0, 5).map((facility) => (
-                  <li key={facility.id}>{facility.name}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Book Button */}
-            <div className="w-full lg:w-[25%] p-4 flex items-center justify-center">
-              <button className="bg-blue-500 text-white px-4 py-2 rounded-lg">Book Now</button>
-            </div>
-          </div>
-        );
-      })}
+            ))
+          ) : (
+            <p>No recommendations available.</p>
+          )}
+        </div>
+      ) : (
+        <p>Loading hotel data...</p>
+      )}
     </div>
 
           {isModalOpen && (
