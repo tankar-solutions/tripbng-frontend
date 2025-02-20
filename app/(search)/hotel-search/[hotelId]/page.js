@@ -32,6 +32,42 @@ export default function Page() {
     checkOut: "",
     rooms: "",
   });
+  useEffect(() => {
+    if (searchParams) {
+      const query = searchParams.keys().next().value;
+      if (query) {
+        const paramsArray = query.split("/");
+        if (paramsArray.length >= 4) {
+          const city = decodeURIComponent(paramsArray[0]);
+          const checkInRaw = paramsArray[1];
+          const checkOutRaw = paramsArray[2];
+          const rooms = paramsArray[3];
+
+          // Format dates to "Thu, 20 Feb 2025"
+          const formattedCheckIn = formatDate(checkInRaw);
+          const formattedCheckOut = formatDate(checkOutRaw);
+
+          setDetails({
+            city,
+            checkIn: formattedCheckIn,
+            checkOut: formattedCheckOut,
+            rooms,
+          });
+        }
+      }
+    }
+  }, [searchParams]);
+
+  // Function to format date
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(date);
+  };
 
   // Load selected location from localStorage
   useEffect(() => {
@@ -64,16 +100,24 @@ export default function Page() {
       }
 
       const availableHotelIds = availabilityList.map((hotel) => hotel.id);
-      const contentList = await getHotelContent(availableHotelIds, "client-demo-channel");
+      const contentList = await getHotelContent(
+        availableHotelIds,
+        "client-demo-channel"
+      );
 
       const mergedHotels = contentList.map((hotelContent) => {
-        const availability = availabilityList.find((hotel) => hotel.id === hotelContent.id);
+        const availability = availabilityList.find(
+          (hotel) => hotel.id === hotelContent.id
+        );
 
         return {
           id: hotelContent.id,
           name: hotelContent.name || "Unknown Hotel",
-          image: hotelContent.heroImage || "https://via.placeholder.com/300x200?text=No+Image",
-          location: hotelContent.contact?.address?.city?.name || "Unknown Location",
+          image:
+            hotelContent.heroImage ||
+            "https://via.placeholder.com/300x200?text=No+Image",
+          location:
+            hotelContent.contact?.address?.city?.name || "Unknown Location",
           rating: hotelContent.starRating || "N/A",
           distance: hotelContent.distance || "N/A",
           availability: availability?.availableRooms || "Unknown",
@@ -98,7 +142,7 @@ export default function Page() {
         {
           headers: {
             "Content-Type": "application/json; charset=utf-8",
-            accountId: "tripbng-live-account",
+            accountId: "zentrum-demo-account",
             "customer-ip": "54.86.50.139",
             correlationId: "5e860c0f-a6a6-1d48-c74e-71f580463d73",
             apiKey: "bc46745f-8af7-473a-aeba-c6ce4efa18e5",
@@ -177,7 +221,7 @@ export default function Page() {
           <p className="text-white font-semibold text-lg">Ahmedabad, Gujrat</p>
         </span>
 
-        <button >
+        <button>
           <Image
             src="/icons/filter.png"
             width={100}
@@ -224,7 +268,9 @@ export default function Page() {
         {/* Filters Section */}
         <div className="bg-white rounded-xl px-2 py-3 w-1/5 hidden md:block ">
           <span className="border flex rounded-lg w-full p-2 mb-3">
-            <p className="text-sm font-medium">Total {totalHotelFound} hotels found</p>
+            <p className="text-sm font-medium">
+              Total {totalHotelFound} hotels found
+            </p>
           </span>
 
           <span className="border flex flex-col rounded-lg w-full mb-3">
@@ -401,80 +447,92 @@ export default function Page() {
 
         {/* Flight Options Section */}
         {loading ? (
-  <Simmer />
-) : (
-  <div className="rounded-xl overflow-y-auto p-0 flex-1">
-    {/* Flight Details */}
-    <div className="mt-0 flex flex-col gap-4">
-      {hotelList.map((hotel) => {
-        const exchangeRate = 82; // 1 USD = 82 INR (example rate)
-        const priceInINR = hotel.rate && hotel.rate.totalRate
-          ? (hotel.rate.totalRate * exchangeRate).toFixed(2)
-          : null;
+          <Simmer />
+        ) : (
+          <div className="rounded-xl overflow-y-auto p-0 flex-1">
+            {/* Flight Details */}
+            <div className="mt-0 flex flex-col gap-4">
+              {hotelList.map((hotel) => {
+                const exchangeRate = 82; // Example rate
+                const priceInINR =
+                  hotel.rate && hotel.rate.totalRate
+                    ? (hotel.rate.totalRate * exchangeRate).toFixed(2)
+                    : null;
 
-        return (
-          <div
-            key={hotel.id}
-            className="bg-white p-4 md:p-6 rounded-xl shadow-lg flex flex-col md:flex-row justify-between gap-4 hover:shadow-2xl transition-all ease-in-out duration-300"
-          >
-            {/* Hotel Image */}
-            <div className="flex-shrink-0 w-full md:w-[200px] h-[200px]">
-              <img
-                src={hotel.image}
-                alt={hotel.name}
-                className="rounded-lg w-full h-full object-cover"
-              />
+                return (
+                  <Link
+                    key={hotel.id}
+                    href={`/hotels/${hotel.id}/${encodeURIComponent(
+                      hotel.name
+                    )}?searchid=${token}`}
+                    className="block"
+                  >
+                    <div className="bg-white p-4 md:p-6 rounded-xl shadow-lg flex flex-col md:flex-row justify-between gap-4 hover:shadow-2xl transition-all ease-in-out duration-300 cursor-pointer">
+                      {/* Hotel Image */}
+                      <div className="flex-shrink-0 w-full md:w-[200px] h-[200px]">
+                        <img
+                          src={hotel.image}
+                          alt={hotel.name}
+                          className="rounded-lg w-full h-full object-cover"
+                        />
+                      </div>
+
+                      {/* Hotel Information */}
+                      <div className="flex flex-col gap-3 flex-1">
+                        <div className="flex items-center justify-between gap-4">
+                          <h4 className="text-lg font-semibold text-gray-900">
+                            {hotel.name}
+                          </h4>
+                          <p className="text-sm text-yellow-500">
+                            {hotel.rating} Stars
+                          </p>
+                        </div>
+                        <p className="text-sm text-blue-600">
+                          {hotel.location}
+                        </p>
+                      </div>
+
+                      {/* Pricing Section */}
+                      <div className="md:border-l md:px-4 px-1 flex flex-col justify-center items-center">
+                        <p className="text-yellow text-xl font-semibold">
+                          {priceInINR === null ? (
+                            <div className="w-6 h-6 border-4 border-t-yellow border-gray-200 rounded-full animate-spin"></div>
+                          ) : priceInINR ? (
+                            <span>Price: ₹{priceInINR}</span>
+                          ) : (
+                            <span>Price: Not available</span>
+                          )}
+                        </p>
+                        <p className="text-sm text-gray-500">Per Night</p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+
+              {/* Cashback Offer */}
+              {hotelList.length > 0 && (
+                <div className="bg-blue-600 rounded-lg px-4 py-2 mt-2 text-center">
+                  <p className="text-sm text-white">
+                    Get INR 742 Cashback on payments via credit/debit cards
+                  </p>
+                </div>
+              )}
+
+              {/* View More Button */}
+              {hotelList.length > 0 && (
+                <div className="mt-4 text-center">
+                  <Link
+                    href="#"
+                    className="text-blue-600 text-sm font-semibold hover:underline"
+                  >
+                    View More Hotels
+                  </Link>
+                </div>
+              )}
             </div>
-
-            {/* Hotel Information */}
-            <div className="flex flex-col gap-3 flex-1">
-              <div className="flex items-center justify-between gap-4">
-                <h4 className="text-lg font-semibold text-gray-900">{hotel.name}</h4>
-                <p className="text-sm text-yellow-500">{hotel.rating} Stars</p>
-              </div>
-              <p className="text-sm text-blue-600">{hotel.location}</p>
-            </div>
-
-            {/* Pricing Section */}
-            <div className="md:border-l md:px-4 px-1 flex flex-col justify-center items-center">
-  <p className="text-yellow text-xl font-semibold">
-    {priceInINR === null ? (
-      <div className="w-6 h-6 border-4 border-t-yellow border-gray-200 rounded-full animate-spin"></div> // Rotating loader
-    ) : priceInINR ? (
-      <span>Price: ₹{priceInINR}</span>
-    ) : (
-      <span>Price: Not available</span>
-    )}
-  </p>
-  <p className="text-sm text-gray-500">Per Night</p>
-</div>
-
           </div>
-        );
-      })}
-
-      {/* Cashback Offer */}
-      {hotelList.length > 0 && (
-        <div className="bg-blue-600 rounded-lg px-4 py-2 mt-2 text-center">
-          <p className="text-sm text-white">
-            Get INR 742 Cashback on payments via credit/debit cards
-          </p>
-        </div>
-      )}
-
-      {/* View More Button */}
-      {hotelList.length > 0 && (
-        <div className="mt-4 text-center">
-          <Link href="#" className="text-blue-600 text-sm font-semibold hover:underline">
-            View More Hotels
-          </Link>
-        </div>
-      )}
-    </div>
-  </div>
-)}
-
-
+        )}
       </div>
     </div>
   );

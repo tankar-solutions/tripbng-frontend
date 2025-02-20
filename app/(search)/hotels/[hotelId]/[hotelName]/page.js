@@ -1,33 +1,134 @@
 "use client";
 
-import Button from "@/components/ui/button";
-import { roomData } from "@/constants/data/roomData";
-import { ChevronRight } from "lucide-react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import axios from "axios";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import { FaTimes } from "react-icons/fa";
+import Image from "next/image";
+import Button from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+
 
 export default function Page() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Function to open the modal
-  const openModal = () => {
-    setIsModalOpen(true);
-  };
-
-  // Function to close the modal
-  const closeModal = () => {
-    setIsModalOpen(false);
-  };
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Extract hotel ID from URL path
+  const pathSegments = pathname.split("/");
+  const hotelId = pathSegments[2]; // Assuming /hotels/{hotelId}/{hotelName}
+
+  // Extract search token from query parameters
+  const searchToken = searchParams.get("searchid");
+
+  // State variables
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [rooms, setRooms] = useState([]);
+  const [hotelDetails, setHotelDetails] = useState(null);
+  const [isModalOpenImg, setIsModalOpenImg] = useState(false);
+
+  // Get all images with Standard size
+  const standardImages = hotelDetails?.images
+    ?.map((img) => img.links.find((link) => link.size === "Standard"))
+    ?.filter(Boolean);
+
+  // Function to open/close modal
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+
+  // Fetch room prices and hotel content
+  useEffect(() => {
+    if (hotelId && searchToken) {
+      getRoomsAndRates(hotelId, searchToken);
+      getHotelContent(hotelId);
+    }
+  }, [hotelId, searchToken]);
+
+  // API: Fetch Room Prices & Availability
+  const getRoomsAndRates = async (hotelId, searchToken) => {
+    try {
+      const response = await axios.post(
+        `https://nexus.prod.zentrumhub.com/api/hotel/${hotelId}/roomsandrates/${searchToken}`,
+        { searchSpecificProviders: false },
+        {
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            accountId: "zentrum-demo-account",
+            "customer-ip": "54.86.50.139",
+            correlationId: "5e860c0f-a6a6-1d48-c74e-71f580463d73",
+            apiKey: "bc46745f-8af7-473a-aeba-c6ce4efa18e5",
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        console.log("Rooms Data:", response.data);
+        setRooms(response.data.rooms || []);
+      } else {
+        console.error("Failed to fetch rooms:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching rooms:", error);
+    }
+  };
+
+  // API: Fetch Hotel Content (Name, Images, Description)
+  const getHotelContent = async (hotelId) => {
+    try {
+      const response = await axios.post(
+        `https://nexus.prod.zentrumhub.com/api/content/hotelcontent/getHotelContent`,
+        {
+          hotelIds: [hotelId],
+          channelId: "client-demo-channel",
+          culture: "en-US",
+          contentFields: ["All"],
+        },
+        {
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            accountId: "zentrum-demo-account",
+            "customer-ip": "54.86.50.139",
+            correlationId: "5e860c0f-a6a6-1d48-c74e-71f580463d73",
+            apiKey: "bc46745f-8af7-473a-aeba-c6ce4efa18e5",
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        console.log("Hotel Details:", response.data);
+        setHotelDetails(response.data.hotels?.[0] || null);
+      } else {
+        console.error("Failed to fetch hotel details:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching hotel details:", error);
+    }
+  };
+  const sliderSettings = {
+    dots: true,
+    infinite: true,
+    speed: 500,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+    arrows: true,
+    adaptiveHeight: true,  // Ensures the height adjusts dynamically
+    appendDots: (dots) => (
+      <div style={{ marginTop: "-5px" }}> {/* Reduce space between image and dots */}
+        <ul style={{ margin: "-20px", padding: "0px" }}>{dots}</ul>
+      </div>
+    ),
+  };
+  
   return (
     <div className="md:container py-10 px-3 md:px-3 flex flex-col gap-4">
       {" "}
       <div className=" grid-cols-5 bg-white rounded-xl hidden sm:grid w-full ">
         <div className="border rounded-l-xl p-4">
           <p className="text-sm">CITY, AREA or PROPERTY</p>
-          <p className="text-md font-semibold">Hard rock hotel goa</p>
+          <p className="text-md font-semibold"> {hotelDetails?.name || ""}</p>
         </div>
         <div className="border p-4">
           <p className="text-sm">Check-In</p>
@@ -62,50 +163,59 @@ export default function Page() {
       <div className="bg-white p-4 rounded-xl shadow-lg">
         <div>
           <h1 className=" md:text-xl  font-semibold ">
-            Hard Rock Hotel Goa Calangute
+            {hotelDetails?.name || ""}
           </h1>
           <div class="flex  gap-3 py-3 flex-col md:flex-row">
             <div class="basis-4/6 bg-blue-200 ">
               <div class="flex w-full gap-3 md:h-96 h-60">
-                <div class="basis-4/6 h-full relative">
-                  <div class="absolute inset-0 bg-black bg-opacity-10 rounded-lg"></div>
+                <div
+                  className="basis-4/6 h-full relative"
+                  onClick={() => setIsModalOpenImg(true)}
+                >
+                  <div className="absolute inset-0 bg-black bg-opacity-10 rounded-lg"></div>
                   <p className="absolute text-sm bottom-3 left-3 text-white font-semibold">
-                    +102 property photos
+                    +{hotelDetails?.images?.length || 0} property photos
                   </p>
-                  <Image
-                    src="/hotels/hotel8.jpg"
-                    class="h-full w-full rounded-lg object-cover"
-                    width={600} height={400}
-                    alt="Hotel img"
-                  />
+                  {hotelDetails?.images?.[0]?.links?.find(
+                    (link) => link.size === "Standard"
+                  )?.url && (
+                    <Image
+                      src={
+                        hotelDetails.images[0].links.find(
+                          (link) => link.size === "Standard"
+                        ).url
+                      }
+                      className="h-full w-full rounded-lg object-cover"
+                      width={600}
+                      height={400}
+                      alt="Hotel Image"
+                      unoptimized={true} // ✅ Disables Next.js image optimization
+                    />
+                  )}
                 </div>
-                <div class="basis-2/6 flex flex-col justify-between h-full">
-                  <div class="relative h-[calc(50%-6px)]">
-                    <div class="absolute inset-0 bg-black bg-opacity-20 rounded-lg"></div>
-                    <p className="absolute text-sm bottom-3 left-3 text-white font-semibold">
-                      360 View
-                    </p>
-                    <Image
-                      src="/hotels/hotel2.jpg"
-                      class="h-full w-full rounded-lg object-cover"
-                      width={600}
-                      height={100}
-                      alt="Hotel img"
-                    />
-                  </div>
-                  <div class="relative h-[calc(50%-6px)]">
-                    <div class="absolute inset-0 bg-black bg-opacity-20 rounded-lg"></div>
-                    <p className="absolute text-sm bottom-3 left-3 text-white font-semibold">
-                      +1576 guest photos
-                    </p>
-                    <Image
-                      src="/hotels/hotel3.jpg"
-                      class="h-full w-full rounded-lg object-cover"
-                      width={600}
-                      height={100}
-                      alt="Hotel img"
-                    />
-                  </div>
+
+                <div className="basis-2/6 flex flex-col justify-between h-full">
+                  {hotelDetails?.images?.slice(1, 3).map((image, index) => (
+                    <div key={index} className="relative h-[calc(50%-6px)]">
+                      <div className="absolute inset-0 bg-black bg-opacity-20 rounded-lg"></div>
+                      <p className="absolute text-sm bottom-3 left-3 text-white font-semibold">
+                        {image.caption || "Hotel Photo"}
+                      </p>
+                      {image?.links?.find((link) => link.size === "Standard")
+                        ?.url && (
+                        <Image
+                          src={
+                            image.links.find((link) => link.size === "Standard")
+                              .url
+                          }
+                          className="h-full w-full rounded-lg object-cover"
+                          width={600}
+                          height={100}
+                          alt="Hotel Image"
+                        />
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
               <p className="leading-tight mt-2 text-gray-500 text-sm md:text-lg">
@@ -115,11 +225,23 @@ export default function Page() {
               </p>
               <div className="flex items-center gap-3 mt-4">
                 <span className="flex items-center gap-2 py-2  px-3 border border-yellow rounded-lg bg-yellow/20">
-                  <Image src="/hotels/spoon.png" className="w-6 h-6" alt="Hotel img" width={100} height={100}/>
+                  <Image
+                    src="/hotels/spoon.png"
+                    className="w-6 h-6"
+                    alt="Hotel img"
+                    width={100}
+                    height={100}
+                  />
                   <p className="text-sm font-medium">Food and Dining</p>
                 </span>
                 <span className="flex items-center gap-2 py-2  px-3 border border-yellow rounded-lg bg-yellow/20">
-                  <Image src="/hotels/location.png" width={100} height={100} className="w-6 h-6" alt="Hotel img"/>
+                  <Image
+                    src="/hotels/location.png"
+                    width={100}
+                    height={100}
+                    className="w-6 h-6"
+                    alt="Hotel img"
+                  />
                   <p className="text-sm font-medium">Location & Surroundings</p>
                 </span>
               </div>
@@ -127,17 +249,35 @@ export default function Page() {
                 <h2 className="text-lg font-semibold ">Amenities</h2>
                 <ul className="py-3 flex flex-wrap items-center gap-4">
                   <li className="flex items-center gap-2">
-                    <Image src="/hotels/breakfast.png" width={100} height={100} className="w-6 h-6" alt="Hotel img" />
+                    <Image
+                      src="/hotels/breakfast.png"
+                      width={100}
+                      height={100}
+                      className="w-6 h-6"
+                      alt="Hotel img"
+                    />
                     <p className="text-gray-500 font-light text-sm">Gym</p>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Image src="/hotels/swimming.png" width={100} height={100} className="w-6 h-6" alt="Hotel img"/>
+                    <Image
+                      src="/hotels/swimming.png"
+                      width={100}
+                      height={100}
+                      className="w-6 h-6"
+                      alt="Hotel img"
+                    />
                     <p className="text-gray-500 font-light text-sm">
                       Swimming Pool
                     </p>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Image src="/hotels/spa.png" width={100} height={100} className="w-6 h-6" alt="Hotel img"/>
+                    <Image
+                      src="/hotels/spa.png"
+                      width={100}
+                      height={100}
+                      className="w-6 h-6"
+                      alt="Hotel img"
+                    />
                     <p className="text-gray-500 font-light text-sm">Spa</p>
                   </li>
                   <button className="text-blue font-semibold text-sm">
@@ -157,7 +297,8 @@ export default function Page() {
                     <span className="border-2 border-yellow rounded-lg p-0.5 ">
                       <Image
                         src="/hotels/hotel6.jpg"
-                        width={100} height={100}
+                        width={100}
+                        height={100}
                         className="w-14 h-14 object-cover rounded-lg"
                         alt="Hotel img"
                       />
@@ -170,7 +311,8 @@ export default function Page() {
                     <span className="border-2 border-yellow rounded-lg p-0.5 ">
                       <Image
                         src="/hotels/hotel7.jpg"
-                        width={100} height={100}
+                        width={100}
+                        height={100}
                         className="w-14 h-14 object-cover rounded-lg"
                         alt="Hotel img"
                       />
@@ -183,7 +325,8 @@ export default function Page() {
                     <span className="border-2 border-yellow rounded-lg p-0.5 ">
                       <Image
                         src="/hotels/hotel8.jpg"
-                        width={100} height={100}
+                        width={100}
+                        height={100}
                         className="w-14 h-14 object-cover rounded-lg"
                         alt="Hotel img"
                       />
@@ -208,7 +351,8 @@ export default function Page() {
                   <li className="flex items-center">
                     <Image
                       src="/icons/breakfast.png"
-                      width={100} height={100}
+                      width={100}
+                      height={100}
                       alt="Breakfast icon"
                       className="w-4 h-4 sm:w-5 sm:h-5"
                     />
@@ -220,7 +364,8 @@ export default function Page() {
                     <Image
                       src="/icons/dot.png"
                       alt="WiFi icon"
-                      width={100} height={100}
+                      width={100}
+                      height={100}
                       className="w-4 h-4 sm:w-5 sm:h-5"
                     />
                     <span className="ml-2 text-xs sm:text-sm">
@@ -281,7 +426,8 @@ export default function Page() {
                   <div className="flex items-center gap-4">
                     <Image
                       src="/hotels/map.png"
-                      width={100} height={100}
+                      width={100}
+                      height={100}
                       className="h-8 sm:h-10 w-12 sm:w-14"
                       alt="Hotel img"
                     />
@@ -318,15 +464,33 @@ export default function Page() {
         <div className="flex flex-col md:flex-row flex-wrap items-center gap-2 w-full md:w-auto">
           <button className="border py-2 px-4 rounded-lg flex items-center justify-between gap-2 w-full md:w-auto text-sm md:text-base">
             Thu, 23 Jan 2025
-            <Image src="/hotels/down.png" width={100} height={100} className="w-5 h-5 md:w-6 md:h-6" alt="Hotel img" />
+            <Image
+              src="/hotels/down.png"
+              width={100}
+              height={100}
+              className="w-5 h-5 md:w-6 md:h-6"
+              alt="Hotel img"
+            />
           </button>
           <button className="border py-2 px-4 rounded-lg flex items-center justify-between gap-2 w-full md:w-auto text-sm md:text-base">
             Fri, 24 Jan 2025
-            <Image src="/hotels/down.png" width={100} height={100} className="w-5 h-5 md:w-6 md:h-6" alt="Hotel img" />
+            <Image
+              src="/hotels/down.png"
+              width={100}
+              height={100}
+              className="w-5 h-5 md:w-6 md:h-6"
+              alt="Hotel img"
+            />
           </button>
           <button className="border py-2 px-4 rounded-lg flex items-center justify-between gap-2 w-full md:w-auto text-sm md:text-base">
             2 Adults
-            <Image src="/hotels/down.png" width={100} height={100} className="w-5 h-5 md:w-6 md:h-6" alt="Hotel img"/>
+            <Image
+              src="/hotels/down.png"
+              width={100}
+              height={100}
+              className="w-5 h-5 md:w-6 md:h-6"
+              alt="Hotel img"
+            />
           </button>
           <button className="border-2 border-yellow py-2 px-4 rounded-lg text-yellow font-medium w-full md:w-auto text-sm md:text-base">
             Update Search
@@ -335,7 +499,14 @@ export default function Page() {
       </div>
       <div className="bg-white p-4 rounded-xl shadow-lg">
         <h2 className="md:text-lg text-sm font-semibold flex items-center gap-1">
-          5 Room Types <Image src="/hotels/down.png" width={100} height={100} className="w-6 h-6" alt="Hotel img"/>
+          5 Room Types{" "}
+          <Image
+            src="/hotels/down.png"
+            width={100}
+            height={100}
+            className="w-6 h-6"
+            alt="Hotel img"
+          />
         </h2>
         <div className="flex flex-wrap items-center gap-2 mt-2">
           <button className="border py-2 px-4 rounded-lg flex items-center gap-2">
@@ -357,110 +528,72 @@ export default function Page() {
           </section>
 
           <div className="space-y-4">
-            {roomData.map((room) => (
-              <div
-                key={room.id}
-                className="border-t flex flex-wrap lg:flex-nowrap items-start"
-              >
-                <div className="w-full lg:w-[25%] border-r">
-                  <div className="p-4">
-                    <button onClick={() => openModal()}>
-                      <Image
-                        src={room.imageSrc}
-                        alt={room.altText}
-                        width={100} height={100}
-                        className="rounded-lg w-full"
-                      />
-                    </button>
-                    <div className="mt-2">
-                      <h3 className="font-semibold text-base lg:text-lg">
-                        {room.roomName}
-                      </h3>
-                      <p className="text-gray-500 text-sm">{room.roomSize}</p>
-                    </div>
+      {hotelDetails?.rooms?.map((room) => {
+        // Find images matching the roomId in roomCodes
+        const roomImages = hotelDetails?.images?.filter((img) =>
+          img.roomCodes.includes(room.roomId)
+        );
 
-                    <ul className="flex flex-wrap items-center gap-2 mt-2">
-                      {room.features.map((feature, index) => (
-                        <li key={index} className="flex items-center gap-1">
-                          <Image
-                          
-                            src="/icons/dot.png"
-                            alt="Feature"
-                            width={100} height={100}
-                            className="w-5 h-5 sm:w-6 sm:h-6"
-                          />
-                          <p className="text-sm text-gray-500">{feature}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="w-full lg:w-[75%] flex flex-col sm:flex-row items-start lg:items-center justify-between p-4 gap-4">
-                  <div className="w-full sm:w-[60%]">
-                    <div className="mb-2">
-                      <h3 className="text-lg sm:text-xl font-semibold">
-                        {room.roomDescription.name}
-                      </h3>
-                      <h4 className="text-base text-gray-600">
-                        {room.roomDescription.subTitle}
-                      </h4>
-                    </div>
-
-                    <p className="text-sm sm:text-base">
-                      {room.roomDescription.capacity}
-                    </p>
-
-                    <div className="flex items-center mt-2 gap-2">
-                      <Image
-                        src="/hotels/spoon.png"
-                        alt="Meal option"
-                        width={100} height={100}
-                        className="w-5 h-5 sm:w-6 sm:h-6"
-                      />
-                      <p className="text-sm sm:text-lg font-medium">
-                        {room.roomDescription.mealOption}
-                      </p>
-                    </div>
-
-                    {room.roomDescription.specialNotes.map((note, index) => (
-                      <p
-                        key={index}
-                        className={
-                          note.includes("Refundable")
-                            ? "text-green-500 text-sm sm:text-base"
-                            : "text-red-500 text-sm sm:text-base"
-                        }
-                      >
-                        {note}
-                      </p>
-                    ))}
-                    <p className="text-sm sm:text-base">
-                      Instructions: {room.roomDescription.instructions}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col items-end w-full sm:w-[40%]">
-                    <h2 className="text-lg sm:text-xl font-semibold">
-                      {room.roomDescription.price}
-                    </h2>
-                    <h3 className="text-sm sm:text-base font-medium">
-                      {room.roomDescription.taxes}
-                    </h3>
-                    <p className="text-sm sm:text-base font-medium text-gray-500">
-                      {room.roomDescription.roomType}
-                    </p>
-                    <button className="bg-yellow py-2 px-4 w-full sm:w-auto rounded-lg text-white font-semibold mt-2 mb-1">
-                      Book Room
-                    </button>
-                    <button className="text-yellow font-semibold underline w-full sm:w-auto">
-                      KNOW MORE
-                    </button>
-                  </div>
-                </div>
+        return (
+          <div key={room.roomId} className="border-t flex flex-wrap lg:flex-nowrap items-start">
+            {/* Room Image Slider */}
+            <div className="w-full lg:w-[25%] border-r">
+              <div className="p-4">
+                {roomImages.length > 0 ? (
+                  <Slider {...sliderSettings}>
+                    {roomImages.map((image, index) =>
+                      image.links.map((link) =>
+                        link.size === "Standard" ? (
+                          <div key={index}>
+                            <Image
+                              src={link.url}
+                              alt={`Room Image ${index}`}
+                              width={400}
+                              height={400}
+                              className="rounded-lg"
+                            />
+                          </div>
+                        ) : null
+                      )
+                    )}
+                  </Slider>
+                ) : (
+                  <Image src="/placeholder.jpg" alt="No image" width={200} height={150} />
+                )}
               </div>
-            ))}
+            </div>
+
+            {/* Room Details */}
+            <div className="w-full lg:w-[50%] p-4">
+              <h3 className="text-xl font-semibold">{room.type}</h3>
+              <p className="text-gray-600">Max Guests: {room.maxGuestAllowed} (Adults: {room.maxAdultAllowed}, Children: {room.maxChildrenAllowed})</p>
+              <p className="text-gray-600">Room Size: {room.area.squareMeters} m² ({room.area.squareFeet} ft²)</p>
+
+              {/* Bed Information */}
+              <p className="font-medium mt-2">Bed Type:</p>
+              <ul className="list-disc list-inside text-gray-500">
+                {room.beds.map((bed, index) => (
+                  <li key={index}>{bed.Count} {bed.Size} Bed</li>
+                ))}
+              </ul>
+
+              {/* Facilities */}
+              <p className="font-medium mt-2">Facilities:</p>
+              <ul className="list-disc list-inside text-gray-500">
+                {room.facilities.slice(0, 5).map((facility) => (
+                  <li key={facility.id}>{facility.name}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Book Button */}
+            <div className="w-full lg:w-[25%] p-4 flex items-center justify-center">
+              <button className="bg-blue-500 text-white px-4 py-2 rounded-lg">Book Now</button>
+            </div>
           </div>
+        );
+      })}
+    </div>
 
           {isModalOpen && (
             <div
@@ -484,29 +617,81 @@ export default function Page() {
                 </div>
                 <div className="p-4 border-b">
                   <span className="flex items-center gap-2">
-                    <Image src="/hotels/breakfast.png" width={100} height={100} className="w-6 h-6" alt="Hotel img"/>
+                    <Image
+                      src="/hotels/breakfast.png"
+                      width={100}
+                      height={100}
+                      className="w-6 h-6"
+                      alt="Hotel img"
+                    />
                     <p>King Bed Sized</p>
                   </span>
-                  </div>
-                  <div className="p-4">
+                </div>
+                <div className="p-4">
                   <h1 className="text-xl font-semibold">Room Features</h1>
                   <span className="flex items-center gap-2">
-                    <Image src="/icons/dot.png" width={100} height={100} className="w-6 h-6" alt="Hotel img"/>
+                    <Image
+                      src="/icons/dot.png"
+                      width={100}
+                      height={100}
+                      className="w-6 h-6"
+                      alt="Hotel img"
+                    />
                     <p>Room Only</p>
                   </span>
-                    </div>
-                  <div className="p-4">
+                </div>
+                <div className="p-4">
                   <h1 className="text-xl font-semibold">Room Description</h1>
                   <span className="flex items-center gap-2">
-                    <Image src="/icons/dot.png" width={100} height={100} className="w-6 h-6" alt="Hotel img"/>
+                    <Image
+                      src="/icons/dot.png"
+                      width={100}
+                      height={100}
+                      className="w-6 h-6"
+                      alt="Hotel img"
+                    />
                     <p>Shared Dormitory, Multiple Beds (4 Twin Bunk Beds)</p>
                   </span>
-                    </div>
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
+      {isModalOpenImg && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+          onClick={() => setIsModalOpenImg(false)} // Click outside to close
+        >
+          <div
+            className="relative bg-white p-4 rounded-lg w-11/12 max-w-4xl max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()} // Prevent closing on click inside
+          >
+            {/* Close Button */}
+            <button
+              className="absolute top-2 right-2 text-gray-800 text-3xl"
+              onClick={() => setIsModalOpen(false)}
+            >
+              {/* <IoClose /> Close Icon */}
+            </button>
+
+            {/* Scrollable Image Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {standardImages.map((image, index) => (
+                <Image
+                  key={index}
+                  src={image.url}
+                  className="w-full h-40 object-cover rounded-lg"
+                  width={300}
+                  height={200}
+                  alt={`Hotel Image ${index + 1}`}
+                  unoptimized={true}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
