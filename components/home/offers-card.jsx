@@ -21,7 +21,7 @@ export default function OffersCard() {
                     <span className='text-yellow'>OFFERS</span> makes Trips Cheaper
                 </h2>
                 <p className='text-sm font-light md:w-1/3'>
-                    { Lorem ipsum dolor sit amet consectetur }
+                    {/* Lorem ipsum dolor sit amet consectetur */}
                 </p>
             </div>
             <div className='bg-white rounded-xl p-4 md:p-6 mt-6 md:mt-8'>
