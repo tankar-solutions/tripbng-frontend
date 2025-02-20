@@ -127,7 +127,7 @@ export default function Page() {
       {" "}
       <div className=" grid-cols-5 bg-white rounded-xl hidden sm:grid w-full ">
         <div className="border rounded-l-xl p-4">
-          <p className="text-sm">CITY, AREA or PROPERTY</p>
+          <p className="text-sm">CITY, AREA or PROPERTYsss</p>
           <p className="text-md font-semibold"> {hotelDetails?.name || ""}</p>
         </div>
         <div className="border p-4">

@@ -237,7 +237,7 @@ export default function Page() {
       />
       <div className=" grid-cols-5 py-10 bg-white rounded-xl hidden md:grid w-full ">
         <div className="border rounded-l-xl p-4">
-          <p className="text-sm">CITY, AREA or PROPERTYssss</p>
+          <p className="text-sm">CITY, AREA or PROPERTY</p>
           <p className="text-md font-semibold">{details.city}</p>
         </div>
         <div className="border p-4">
