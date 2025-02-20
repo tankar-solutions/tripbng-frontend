@@ -18,7 +18,7 @@ export default function OffersCard() {
         <Container className="px-4 py-8 md:py-12">
             <div className='flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 max-w-7xl mx-auto'>
                 <h2 className='text-3xl md:text-4xl font-semibold'>
-                    <span className='text-yellow'>OFFERS</span> makes Trips Cheaper
+                    <span className='text-yellow'>OFFERS</span> makes Trips Cheaper..
                 </h2>
                 <p className='text-sm font-light md:w-1/3'>
                     {/* Lorem ipsum dolor sit amet consectetur */}
