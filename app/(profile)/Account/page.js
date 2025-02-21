@@ -49,12 +49,19 @@ export default function Account() {
   const [pincode, setPincode] = useState("");
   const [state, setState] = useState("");
   const [error, setError] = useState("");
-  const [deleteMobile, setDeleteMobile] = useState(""); // Store user mobile number
+  const [deleteMobile, setDeleteMobile] = useState("");
   const [otp, setOtp] = useState("");
   const [isModalOpenOtp, setIsModalOpenOtp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
-  const correctOtp = "1234"; // Replace with actual OTP verification logic
+  const correctOtp = "1234";
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/");
+    }
+  }, []);
 
   const handleDeleteClick = () => {
     setIsModalOpenOtp(true);
