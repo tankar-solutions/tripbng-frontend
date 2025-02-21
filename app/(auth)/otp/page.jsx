@@ -24,26 +24,36 @@ function OtpContent() {
 
   async function verifyOtp() {
     try {
+      let formattedNumber = number.trim(); // Remove spaces
+  
+      // Ensure the number starts with +91
+      if (!formattedNumber.startsWith("+91")) {
+        formattedNumber = `+91${formattedNumber.replace(/^(\+91|91)/, "")}`;
+      }
+  
       const response = await apiService.post("/user/verify", {
-        mobile: number,
-        otp: 123456,
+        mobile: formattedNumber, 
+        otp: "123456",
       });
-      if (response.success) {
+  
+      if (response.status === 200) {
         const { token, user } = response.data;
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
-
+  
         router.push("/");
-        toast.success("Login Scccessful!");
+        toast.success("Login Successful!");
         setTimeout(() => {
           window.location.reload();
         }, 100);
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || "OTP verification failed");
       console.log(error);
     }
   }
+  
+  
 
   async function resendOtp() {
     try {
@@ -67,7 +77,7 @@ function OtpContent() {
           Verify Your Mobile Number
         </p>
         <p className="text-xs text-gray-500">
-          Please enter the OTP received on +91 {number}
+          Please enter the OTP received on {number}
         </p>
         <InputOTP
           className="w-full"

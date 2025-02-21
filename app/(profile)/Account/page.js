@@ -48,24 +48,18 @@ export default function Account() {
   const [address, setAddress] = useState("");
   const [pincode, setPincode] = useState("");
   const [state, setState] = useState("");
-  const [isModalOpenOtp, setIsModalOpenOtp] = useState(false);
-  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
+  const [deleteMobile, setDeleteMobile] = useState(""); // Store user mobile number
+  const [otp, setOtp] = useState("");
+  const [isModalOpenOtp, setIsModalOpenOtp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
   const correctOtp = "1234"; // Replace with actual OTP verification logic
 
   const handleDeleteClick = () => {
     setIsModalOpenOtp(true);
   };
 
-  const handleVerifyOtp = () => {
-    if (otp === correctOtp) {
-      alert("Account deleted successfully!");
-      setIsModalOpenOtp(false);
-      // Add API call for account deletion here
-    } else {
-      setError("Invalid OTP. Please try again.");
-    }
-  };
   const handleNameChange = (e) => setName(e.target.value);
 
   const handleAddressChange = (e) => setAddress(e.target.value);
@@ -207,6 +201,67 @@ export default function Account() {
         toast.error(error.message);
         console.log(error);
       }
+    }
+  };
+
+  const sendDeleteOtp = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await apiService.post("/user/deleteaccountotpsend", {
+        mobile: phone,
+      });
+
+      if (response.status == 200) {
+        setIsModalOpenOtp(true);
+      } else {
+        setError(response.data.message || "Failed to send OTP.");
+      }
+    } catch (error) {
+      setError("Error sending OTP. Please try again.");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to verify OTP
+  const handleVerifyOtp = async () => {
+    if (otp.length !== 6) {
+      setError("OTP must be 6 digits.");
+      return;
+    }
+  
+    setOtpLoading(true);
+    setError("");
+  
+    try {
+      const response = await apiService.post("/user/verifyotpfordelete", { otp });
+  
+      if (response.status === 200) {
+        alert("Account deleted successfully.");
+  
+        // Clear user session
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+        setIsModalOpenOtp(false);
+  
+        toast.success("Account deleted successfully.");
+  
+        // Navigate to home
+        router.push("/");
+        setTimeout(() => {
+          window.location.href = "/"; // Fallback if router.push doesn't work
+        }, 200);
+      } else {
+        setError(response.data.message || "Invalid OTP. Please try again.");
+      }
+    } catch (error) {
+      setError(error.response?.data?.message || "OTP verification failed.");
+      console.error(error);
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -699,61 +754,75 @@ export default function Account() {
           </div>
         </div>
         <div className="mb-5">
-        <div className="bg-white rounded-lg border py-3">
-        <div className="flex items-center justify-between mr-3">
-          <span className="border-l-4 border-red-500">
-            <div className="ml-2">
-              <h1 className="text-xl font-semibold md:text-3xl text-red-600">
-                Delete Account
-              </h1>
-              <p className="text-sm md:text-lg font-medium text-gray-500">
-                Deleting your account will permanently remove all your data.
-              </p>
+          <div className="bg-white rounded-lg border py-3">
+            <div className="flex items-center justify-between mr-3">
+              <span className="border-l-4 border-red-500">
+                <div className="ml-2">
+                  <h1 className="text-xl font-semibold md:text-3xl text-red-600">
+                    Delete Account
+                  </h1>
+                  <p className="text-sm md:text-lg font-medium text-gray-500">
+                    Deleting your account will permanently remove all your data.
+                  </p>
+                </div>
+              </span>
             </div>
-          </span>
-        </div>
-        <div className="mx-3 mt-5">
-          <p className="text-sm text-gray-600">
-            This action is irreversible. All your data will be lost, and you won't be able to recover it.
-          </p>
-          <button
-            className="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg mt-4 hover:bg-red-700"
-            onClick={handleDeleteClick}
-          >
-            Delete My Account
-          </button>
-        </div>
-      </div>
-      {isModalOpenOtp && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setIsModalOpenOtp(false)}>
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-xl font-semibold text-gray-800">Enter OTP</h2>
-            <p className="text-sm text-gray-600 mb-4">Enter the 4-digit OTP sent to your email/phone.</p>
-            <input
-              type="text"
-              maxLength="4"
-              className="w-full border p-2 rounded-lg text-center text-xl"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-            />
-            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-            <div className="flex justify-between mt-4">
+            <div className="mx-3 mt-5">
+              <p className="text-sm text-gray-600">
+                This action is irreversible. All your data will be lost, and you
+                won't be able to recover it.
+              </p>
               <button
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
-                onClick={() => setIsModalOpen(false)}
+                className="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg mt-4 hover:bg-red-700 disabled:bg-gray-400"
+                onClick={sendDeleteOtp}
+                disabled={loading}
               >
-                Cancel
-              </button>
-              <button
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                onClick={handleVerifyOtp}
-              >
-                Verify OTP
+                {loading ? "Sending OTP..." : "Delete My Account"}
               </button>
             </div>
           </div>
-        </div>
-      )}
+
+          {isModalOpenOtp && (
+            <div
+              className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+              onClick={() => setIsModalOpenOtp(false)}
+            >
+              <div
+                className="bg-white p-6 rounded-lg shadow-lg w-96"
+                onClick={(e) => e.stopPropagation()} // Prevent modal close when clicking inside
+              >
+                <h2 className="text-xl font-semibold text-gray-800">
+                  Enter OTP
+                </h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Enter the 6-digit OTP sent to your email/phone.
+                </p>
+                <input
+                  type="text"
+                  maxLength="6"
+                  className="w-full border p-2 rounded-lg text-center text-xl"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                />
+                {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                <div className="flex justify-between mt-4">
+                  <button
+                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
+                    onClick={() => setIsModalOpenOtp(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                    onClick={handleVerifyOtp}
+                    disabled={otpLoading}
+                  >
+                    {otpLoading ? "Verifying..." : "Verify OTP"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       {isModalOpen && (

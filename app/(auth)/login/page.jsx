@@ -15,7 +15,7 @@ export default function SignIn() {
 
   async function signIn() {
     try {
-      const { data } = await apiService.post("user/login", { mobile: number });
+      const { data } = await apiService.post("user/login", { mobile: `+91${number}` });
       console.log(data);
     } catch (error) {
       console.log(error);
@@ -39,7 +39,7 @@ export default function SignIn() {
         />
       </div>
 
-      <Link className="w-full" href={`/otp?number=${number}`}>
+      <Link className="w-full" href={`/otp?number=+91${number}`}>
         <Button
           className="w-full font-medium py-2 rounded-md transition"
           onClick={signIn}
