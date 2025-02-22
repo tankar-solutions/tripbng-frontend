@@ -70,6 +70,14 @@ const HomeBox = () => {
     i: 0,
     tp: 0,
   });
+
+  useEffect(() => {
+    if (currentModal === "hotel") {
+      router.push("https://ratehawk.prod.zentrumhub.com/");
+    }
+  }, [currentModal, router]);
+
+
   const handleCheckInChange = (date, dateString) => {
     setCheckIn(dateString);
     // Ensure checkout is after checkin, and at least one day later
@@ -171,6 +179,8 @@ const HomeBox = () => {
     allCityData();
     getAllCountries();
   }, []);
+
+  
 
   const getAllCountries = async () => {
     try {
@@ -353,7 +363,7 @@ const HomeBox = () => {
     },
     {
       title: "Hotels",
-      url: "/hotel",
+      url: "https://ratehawk.prod.zentrumhub.com/",
       image: "/nav/hotel.png",
       modalName: "hotel",
     },
@@ -492,7 +502,7 @@ const HomeBox = () => {
                 </div>
               </div>
             )}
-            {currentModal === "hotel" && (
+            {/* {currentModal === "hotel" && (
               <div>
                 <div className="bg-yellow p-3 flex items-center gap-3">
                   <button onClick={closeModal}>
@@ -561,7 +571,7 @@ const HomeBox = () => {
                   </button>
                 </div>
               </div>
-            )}
+            )} */}
 
             {currentModal === "visa" && (
               <div>

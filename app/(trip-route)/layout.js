@@ -33,7 +33,7 @@ const navItems = [
   },
   {
     title: "Hotels",
-    url: "/hotel",
+    url: "https://ratehawk.prod.zentrumhub.com/",
     icon: HotelIcon,
     activeIcon: HotelColorIcon,
     image: "/nav/hotel.png",

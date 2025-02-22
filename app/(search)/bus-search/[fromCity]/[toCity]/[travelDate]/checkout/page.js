@@ -249,7 +249,7 @@ const Page = () => {
               <p className="text font-semibold">₹1799.0</p>
             </div>
             <p className="text-gray text-xs text-justify">Final payable amount will be updated on the next page</p>
-            <button className="text-lg font-semibold bg-yellow text-white w-full mt-3 mb-2 p-2 rounded-lg">
+            <button className="  text-lg font-semibold bg-yellow text-white w-full mt-3 mb-2 p-2 rounded-lg">
               Continue
             </button>
             <p className="text-xs text-gray text-justify">By proceeding, I agree to MakeMyTrip’s <span className="text-yellow">User Agreement</span>, <span className="text-yellow">Terms of Service</span> and <span className="text-yellow">Privacy Policy</span></p>
