@@ -807,7 +807,7 @@ export default function Home() {
           <Checkbox checked={selectedFareType === "Senior Citizen"} />
           <div className="flex flex-col items-start">
             <p className="text-md font-semibold">Senior Citizen</p>
-            <p className="text-xs sm:text-sm text-neutral-400">upto $560 off</p>
+            <p className="text-xs sm:text-sm text-neutral-400">upto ₹560 off</p>
           </div>
         </button>
         <button
@@ -820,7 +820,7 @@ export default function Home() {
           <Checkbox checked={selectedFareType === "Armed Forces"} />
           <div className="flex flex-col items-start">
             <p className="text-md font-semibold">Armed Forces</p>
-            <p className="text-xs sm:text-sm text-neutral-400">upto $560 off</p>
+            <p className="text-xs sm:text-sm text-neutral-400">upto ₹560 off</p>
           </div>
         </button>
         <button
@@ -828,12 +828,12 @@ export default function Home() {
               ? "border-2 border-yellow"
               : "border-neutral-300"
             }`}
-          onClick={() => setSelectedFareType("Doctor and Nurses")}
+          onClick={() => setSelectedFareType("Student")}
         >
-          <Checkbox checked={selectedFareType === "Doctor and Nurses"} />
+          <Checkbox checked={selectedFareType === "Student"} />
           <div className="flex flex-col items-start">
-            <p className="text-md font-semibold">Doctor and Nurses</p>
-            <p className="text-xs sm:text-sm text-neutral-400">upto $560 off</p>
+            <p className="text-md font-semibold">Student</p>
+            <p className="text-xs sm:text-sm text-neutral-400">upto ₹560 off</p>
           </div>
         </button>
       </div>
