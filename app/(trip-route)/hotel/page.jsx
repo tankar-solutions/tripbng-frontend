@@ -149,7 +149,7 @@ console.log(selectedLocation);
     console.log("Selected city saved to localStorage:", cityData);
     const payload = {
       channelId: "client-demo-channel",
-      currency: "USD",
+      currency: "INR",
       culture: "en-US",
       checkIn,
       checkOut,

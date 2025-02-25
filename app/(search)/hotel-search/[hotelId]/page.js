@@ -462,11 +462,11 @@ export default function Page() {
             {/* Flight Details */}
             <div className="mt-0 flex flex-col gap-4">
               {hotelList.map((hotel) => {
-                const exchangeRate = 82; // Example rate
-                const priceInINR =
-                  hotel.rate && hotel.rate.totalRate
-                    ? (hotel.rate.totalRate * exchangeRate).toFixed(2)
-                    : null;
+                // const exchangeRate = 82; // Example rate
+                // const priceInINR =
+                //   hotel.rate && hotel.rate.totalRate
+                //     ? (hotel.rate.totalRate * exchangeRate).toFixed(2)
+                //     : null;
 
                 return (
                   <Link
@@ -504,13 +504,11 @@ export default function Page() {
                       {/* Pricing Section */}
                       <div className="md:border-l md:px-4 px-1 flex flex-col justify-center items-center">
                         <p className="text-yellow text-xl font-semibold">
-                          {priceInINR === null ? (
-                            <div className="w-6 h-6 border-4 border-t-yellow border-gray-200 rounded-full animate-spin"></div>
-                          ) : priceInINR ? (
-                            <span>Price: ₹{priceInINR}</span>
-                          ) : (
-                            <span>Price: Not available</span>
-                          )}
+                        {hotel.rate && hotel.rate.totalRate ? (
+                <span>Price: ₹{hotel.rate.totalRate}</span>
+              ) : (
+                <span>Price: Not available</span>
+              )}
                         </p>
                         <p className="text-sm text-gray-500">Per Night</p>
                       </div>

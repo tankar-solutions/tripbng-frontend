@@ -10,6 +10,7 @@ import { ChevronRight } from "lucide-react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import PriceRateModal from "@/components/PriceRateModal";
 
 export default function Page() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function Page() {
 
   // Extract hotel ID from URL path
   const pathSegments = pathname.split("/");
-  const hotelId = pathSegments[2]; // Assuming /hotels/{hotelId}/{hotelName}
+  const hotelId = pathSegments[2];
 
   // Extract search token from query parameters
   const searchToken = searchParams.get("searchid");
@@ -28,7 +29,8 @@ export default function Page() {
   const [rooms, setRooms] = useState([]);
   const [hotelDetails, setHotelDetails] = useState(null);
   const [isModalOpenImg, setIsModalOpenImg] = useState(false);
-  console.log(rooms);
+  const [isPriceRateModal, setIsPriceRateModal] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
 
   // Get all images with Standard size
   const standardImages = hotelDetails?.images
@@ -46,6 +48,16 @@ export default function Page() {
       getHotelContent(hotelId);
     }
   }, [hotelId, searchToken]);
+
+  const handlePriceOpenModal = (room) => {
+    setSelectedRoom(room);
+    setIsPriceRateModal(true);
+  };
+  
+  const handlePriceCloseModal = () => {
+    setSelectedRoom(null);
+    setIsPriceRateModal(false);
+  };
 
   // API: Fetch Room Prices & Availability
   const getRoomsAndRates = async (hotelId, searchToken) => {
@@ -233,7 +245,7 @@ export default function Page() {
             {hotelDetails?.name || ""}
           </h1>
           <div class="flex  gap-3 py-3 flex-col md:flex-row">
-            <div class="basis-4/6 bg-blue-200 ">
+            <div class=" bg-blue-200 ">
               <div class="flex w-full gap-3 md:h-96 h-60">
                 <div
                   className="basis-4/6 h-full relative"
@@ -256,13 +268,36 @@ export default function Page() {
                       width={600}
                       height={400}
                       alt="Hotel Image"
-                      unoptimized={true} // ✅ Disables Next.js image optimization
+                      unoptimized={true}
                     />
                   )}
                 </div>
 
                 <div className="basis-2/6 flex flex-col justify-between h-full">
                   {hotelDetails?.images?.slice(1, 3).map((image, index) => (
+                    <div key={index} className="relative h-[calc(50%-6px)]">
+                      <div className="absolute inset-0 bg-black bg-opacity-20 rounded-lg"></div>
+                      <p className="absolute text-sm bottom-3 left-3 text-white font-semibold">
+                        {image.caption || "Hotel Photo"}
+                      </p>
+                      {image?.links?.find((link) => link.size === "Standard")
+                        ?.url && (
+                        <Image
+                          src={
+                            image.links.find((link) => link.size === "Standard")
+                              .url
+                          }
+                          className="h-full w-full rounded-lg object-cover"
+                          width={600}
+                          height={100}
+                          alt="Hotel Image"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="basis-2/6 flex flex-col justify-between h-full">
+                  {hotelDetails?.images?.slice(4, 6).map((image, index) => (
                     <div key={index} className="relative h-[calc(50%-6px)]">
                       <div className="absolute inset-0 bg-black bg-opacity-20 rounded-lg"></div>
                       <p className="absolute text-sm bottom-3 left-3 text-white font-semibold">
@@ -403,116 +438,7 @@ export default function Page() {
               </div>
             </div>
 
-            <div class="basis-2/6 ">
-              <div className="room-info p-4 border rounded-lg mb-3">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-semibold">
-                    Deluxe Room Twin Bed
-                  </h2>
-                  <p className="text-sm sm:text-lg text-gray-600 font-medium">
-                    Fits 2 Adults
-                  </p>
-                </div>
-
-                <ul className="flex flex-col gap-2 mt-3">
-                  <li className="flex items-center">
-                    <Image
-                      src="/icons/breakfast.png"
-                      width={100}
-                      height={100}
-                      alt="Breakfast icon"
-                      className="w-4 h-4 sm:w-5 sm:h-5"
-                    />
-                    <span className="ml-2 text-xs sm:text-sm text-green-400">
-                      Breakfast included
-                    </span>
-                  </li>
-                  <li className="flex items-center">
-                    <Image
-                      src="/icons/dot.png"
-                      alt="WiFi icon"
-                      width={100}
-                      height={100}
-                      className="w-4 h-4 sm:w-5 sm:h-5"
-                    />
-                    <span className="ml-2 text-xs sm:text-sm">
-                      Non-Refundable
-                    </span>
-                  </li>
-                </ul>
-
-                <div className="pricing mt-4 flex flex-wrap items-center gap-3">
-                  <p className="text-xs sm:text-sm text-gray-600 font-semibold line-through">
-                    ₹ 8,249
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600">Per Night</p>
-                </div>
-
-                <div className="final-price mt-1 flex flex-wrap items-baseline gap-3">
-                  <p className="text-xl sm:text-2xl font-bold">₹ 5,432</p>
-                  <p className="text-xs sm:text-sm text-gray-500 font-medium">
-                    + ₹ 1,501 taxes & fees
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 mt-2">
-                  <button
-                    className="w-full sm:w-auto py-2 px-5 rounded-lg text-white font-semibold shadow-lg"
-                    style={{
-                      background: "linear-gradient(92deg, #FF8E00, #FFB300)",
-                    }}
-                  >
-                    BOOK THIS NOW
-                  </button>
-                  <button className="w-full sm:w-auto py-2 px-5 text-blue font-semibold">
-                    11 More Options
-                  </button>
-                </div>
-              </div>
-              <div className="p-4 border rounded-lg">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <h2 className="bg-yellow text-white font-bold text-xl sm:text-2xl py-2 sm:py-3 px-3 sm:px-4 rounded-lg">
-                      4.1
-                    </h2>
-                    <span className="flex flex-wrap items-center gap-2">
-                      <p className="text-yellow font-semibold text-base sm:text-lg">
-                        Very Good
-                      </p>
-                      <p className="text-xs sm:text-sm text-gray-500">
-                        (5744 RATINGS)
-                      </p>
-                    </span>
-                  </div>
-                  <button className="text-blue font-semibold text-sm sm:text-base">
-                    All Reviews
-                  </button>
-                </div>
-                <span className="border-b flex my-2"></span>
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <Image
-                      src="/hotels/map.png"
-                      width={100}
-                      height={100}
-                      className="h-8 sm:h-10 w-12 sm:w-14"
-                      alt="Hotel img"
-                    />
-                    <span className="flex flex-wrap items-center gap-2">
-                      <p className="text-yellow font-semibold text-base sm:text-lg">
-                        Very Good
-                      </p>
-                      <p className="text-xs sm:text-sm text-gray-500">
-                        (5744 RATINGS)
-                      </p>
-                    </span>
-                  </div>
-                  <button className="text-blue font-semibold text-sm sm:text-base">
-                    All Reviews
-                  </button>
-                </div>
-              </div>
-            </div>
+            
           </div>
         </div>
       </div>
@@ -706,7 +632,7 @@ export default function Page() {
                               <p className="text-sm text-gray-600">
                                 Total: ₹{rate.totalRate}
                               </p>
-                              <button className="mt-2 bg-yellow hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-sm">
+                              <button className="mt-2 bg-yellow hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-sm" onClick={() => handlePriceOpenModal(group)}>
                                 Book Now
                               </button>
                             </div>
@@ -792,21 +718,18 @@ export default function Page() {
       {isModalOpenImg && (
         <div
           className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
-          onClick={() => setIsModalOpenImg(false)} // Click outside to close
+          onClick={() => setIsModalOpenImg(false)}
         >
           <div
             className="relative bg-white p-4 rounded-lg w-11/12 max-w-4xl max-h-[80vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()} // Prevent closing on click inside
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
             <button
               className="absolute top-2 right-2 text-gray-800 text-3xl"
               onClick={() => setIsModalOpen(false)}
             >
-              {/* <IoClose /> Close Icon */}
             </button>
 
-            {/* Scrollable Image Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {standardImages.map((image, index) => (
                 <Image
@@ -823,6 +746,13 @@ export default function Page() {
           </div>
         </div>
       )}
+    <PriceRateModal
+        isOpen={isPriceRateModal}
+        onClose={handlePriceCloseModal}
+        selectedRoom={selectedRoom}
+        hotelDetailsInfo= {hotelDetails}
+      />
+
     </div>
   );
 }

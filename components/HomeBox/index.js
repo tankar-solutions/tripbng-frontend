@@ -71,11 +71,11 @@ const HomeBox = () => {
     tp: 0,
   });
 
-  useEffect(() => {
-    if (currentModal === "hotel") {
-      router.push("https://ratehawk.prod.zentrumhub.com/");
-    }
-  }, [currentModal, router]);
+  // useEffect(() => {
+  //   if (currentModal === "hotel") {
+  //     router.push("https://ratehawk.prod.zentrumhub.com/");
+  //   }
+  // }, [currentModal, router]);
 
 
   const handleCheckInChange = (date, dateString) => {
@@ -502,7 +502,7 @@ const HomeBox = () => {
                 </div>
               </div>
             )}
-            {/* {currentModal === "hotel" && (
+            {currentModal === "hotel" && (
               <div>
                 <div className="bg-yellow p-3 flex items-center gap-3">
                   <button onClick={closeModal}>
@@ -571,7 +571,7 @@ const HomeBox = () => {
                   </button>
                 </div>
               </div>
-            )} */}
+            )}
 
             {currentModal === "visa" && (
               <div>
